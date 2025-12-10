@@ -37,7 +37,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
     // Drawing Helpers
     const drawBackground = () => {
-        ctx.fillStyle = "black";
+        ctx.fillStyle = "blue";
         ctx.fillRect(0, 0, width, height);
         // Center dashed line
         ctx.strokeStyle = "gray";
