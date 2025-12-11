@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Pong Test</title>
+	<style>
+	body
+	{
+		margin: 0; // Usually browers add a small margin around the page. //
+		background: black; // Browser page colour //
+		color: yellow; // Default text colour for the page //
+		display: flex; // Changes page layout from default to flexbox format //
+		flex-direction: column; // Stack Children from top to bottom //
+					// <header1> comes first followed by <canvas> //
+		align-items: center;	// Center Children horizontally in the page //
+		justify-content: center; // Makes sure everything is perfectly centered //
+		height: 100vh;		// 100% of the viewport height used for flexbox //
+		font-family: sans-serif; // font type //
+	}
+	#pong
+	{
+		border: 1px solid white; // draws white border around canvas so can see the shape //
+	}
+	</style>
+</head>
+<body>
+	<h1>Welcome To Pong</h1>
+	<canvas id="pong" width="800" height="600"></canvas> // Game drawing area //
+	<script type="module" src="./dist/main.js?v=17"></script> // loading the javascript file //
+</body>
+</html>
+
+
+So the meaning of this is to create a clean black full screen page.
+Centers the Header and game canvas
+Gives the game size 800 by 600
+Loads your typescript compiled javascript file
+Javascript finds the canvas and runs the Pong engine inside it. 
