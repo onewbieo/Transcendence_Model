@@ -126,11 +126,12 @@ window.addEventListener("DOMContentLoaded", () =>
 
 			ctx.fillText(leftScore.toString(), width / 4, 50);
 			ctx.fillText(rightScore.toString(), (width * 3) / 4, 50);
-	}
+	};
 
 	const	drawGameOver = () =>
 	{
-		ctx.fillStyle = "white;"
+		ctx.fillStyle = "white";
+
 		ctx.font = "48px Arial";
 		ctx.textAlign = "center";
 
@@ -142,14 +143,39 @@ window.addEventListener("DOMContentLoaded", () =>
 			winnerText = "Right Player Wins!";
 		ctx.font = "32px Arial";
 		ctx.fillText(winnerText, width / 2, height / 2 + 30);
+	};
+
+	const	drawPausedOverlay = (msg: string) =>
+	{
+		ctx.font = "32px Arial";
+		ctx.fillStyle = "white";
+		ctx.textAlign = "center";
+		ctx.fillText("PAUSED (P to resume)", width / 2, height / 2);
 	}
 
 	//Input handling (keyboard)
 	let keys:       Record<string, boolean> = {};
+	
+	let	pausedManual = false;
+	let	pausedAuto = false;
+	let	pauseMessage = "";
 
 	document.addEventListener("keydown", (e) =>
 	{
 		keys[e.key] = true;
+		if ((e.key === "p" || e.key === "P") && !e.repeat)
+		{
+			if (pausedAuto)
+			{
+				pausedAuto = false;
+				pauseMessage = "";
+			}
+			else
+			{
+				pausedManual = !pausedManual;
+				pauseMessage = pausedManual ? "PAUSED (P to resume)" : "";
+			}
+		}
 	});
 
 	document.addEventListener("keyup", (e) =>
@@ -157,11 +183,25 @@ window.addEventListener("DOMContentLoaded", () =>
 		keys[e.key] = false;
 	});
 
+	window.addEventListener("blur", () =>
+	{
+		pausedAuto = true;
+		pauseMessage = "PAUSED (press P to resume)";
+		keys = {};
+	});
+
+	window.addEventListener("focus", () =>
+	{
+		keys = {};
+	});
+
+	const	isPaused = () => pausedManual || pausedAuto;
+
 	//Small helper to keep values inside a range
 	const	clamp = (value: number, min: number, max: number): number =>
 	{
 		return Math.max(min, Math.min(max, value));
-	}
+	};
 
 	const	hitPaddle = (p: Paddle): boolean =>
 	{
@@ -280,10 +320,17 @@ window.addEventListener("DOMContentLoaded", () =>
 			drawGameOver();
 			return;
 		}
-		update();
+
+		if (!isPaused())
+			update();
+		
 		render();
+
+		if (isPaused())
+			drawPausedOverlay(pauseMessage);
+
 		requestAnimationFrame(loop);
-	}
+	};
 
 	console.log("Paddles drawn:", { leftPaddle, rightPaddle });
 	loop();
