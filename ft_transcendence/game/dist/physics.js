@@ -1,4 +1,4 @@
-import { BALL_SPEED, SERVE_DELAY_MS } from "./constants";
+import { BALL_SPEED, SERVE_DELAY_MS } from "./constants.js";
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export const hitPaddle = (p, ball) => {
     const paddleLeft = p.x;
@@ -25,9 +25,9 @@ export const resetBall = (ball, width, height, direction) => {
     ball.vy = Math.sin(angle) * BALL_SPEED;
 };
 export const serveBallWithDelay = (ball, width, height, direction, onPause, onResume, delayMs = SERVE_DELAY_MS) => {
-    resetBall(ball, width, height, direction);
     onPause(direction === 1 ? "RIGHT SERVES" : "LEFT SERVES");
+    resetBall(ball, width, height, direction);
     setTimeout(() => {
         onResume();
-    }, SERVE_DELAY_MS);
+    }, delayMs);
 };

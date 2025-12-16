@@ -1,4 +1,4 @@
-import type { Paddle, Ball } from "./types";
+import type { Paddle, Ball } from "./types.js";
 
 export const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
 	ctx.fillStyle = "black";

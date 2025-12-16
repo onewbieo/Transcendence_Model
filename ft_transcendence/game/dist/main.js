@@ -1,6 +1,6 @@
-import { MAX_SCORE, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED, BALL_RADIUS, BALL_SPEED, BALL_SPEEDUP, BALL_MAX_SPEED, } from "./constants";
-import { clamp, hitPaddle, serveBallWithDelay } from "./physics";
-import { drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay } from "./render";
+import { MAX_SCORE, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED, BALL_RADIUS, BALL_SPEED, BALL_SPEEDUP, BALL_MAX_SPEED, } from "./constants.js";
+import { clamp, hitPaddle, serveBallWithDelay } from "./physics.js";
+import { drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay } from "./render.js";
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById("pong");

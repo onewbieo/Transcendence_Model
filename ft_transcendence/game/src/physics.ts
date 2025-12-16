@@ -1,5 +1,5 @@
-import type { Paddle, Ball } from "./types";
-import { BALL_SPEED, SERVE_DELAY_MS } from "./constants";
+import type { Paddle, Ball } from "./types.js";
+import { BALL_SPEED, SERVE_DELAY_MS } from "./constants.js";
 
 export const clamp = (value: number, min: number, max: number): number =>
 	Math.max(min, Math.min(max, value));
@@ -44,11 +44,11 @@ export const serveBallWithDelay = (
 	onResume: () => void,
 	delayMs: number = SERVE_DELAY_MS
 ) => {
-	resetBall(ball, width, height, direction);
 	onPause(direction === 1 ? "RIGHT SERVES" : "LEFT SERVES");
-
+	resetBall(ball, width, height, direction);
+	
 	setTimeout(() =>
 	{
 		onResume();
-	}, SERVE_DELAY_MS);
+	}, delayMs);
 };

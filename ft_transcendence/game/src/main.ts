@@ -1,14 +1,14 @@
-import type { Paddle, Ball } from "./types";
+import type { Paddle, Ball } from "./types.js";
 import {
 	MAX_SCORE,
 	PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED,
 	BALL_RADIUS, BALL_SPEED, BALL_SPEEDUP, BALL_MAX_SPEED,
-} from "./constants";
+} from "./constants.js";
 
-import { clamp, hitPaddle, serveBallWithDelay } from "./physics";
+import { clamp, hitPaddle, serveBallWithDelay } from "./physics.js";
 import {
 	drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay
-} from "./render";
+} from "./render.js";
 
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () =>
