@@ -1,5 +1,5 @@
 import type { Paddle, Ball } from "./types";
-import { BALL_SPEED } from "./constants";
+import { BALL_SPEED, SERVE_DELAY_MS } from "./constants";
 
 export const clamp = (value: number, min: number, max: number): number =>
 	Math.max(min, Math.min(max, value));
@@ -21,9 +21,34 @@ export const hitPaddle = (p: Paddle, ball: Ball): boolean => {
 	return overlapX && overlapY;
 };
 
+const randomServeAngle = (): number =>
+{
+	const maxAngle = Math.PI / 6;
+	return (Math.random() * 2 - 1) * maxAngle;
+};
+
 export const	resetBall = (ball: Ball, width: number, height: number, direction: 1 | -1) => {
 	ball.x = width / 2;
 	ball.y = height /2;
-	ball.vx = direction * BALL_SPEED;
-	ball.vy = BALL_SPEED * 0.7;
+	const angle = randomServeAngle();
+	ball.vx = Math.cos(angle) * BALL_SPEED * direction;
+	ball.vy = Math.sin(angle) * BALL_SPEED;
+};
+
+export const serveBallWithDelay = (
+	ball: Ball,
+	width: number,
+	height: number,
+	direction: 1 | -1,
+	onPause: (msg: string) => void,
+	onResume: () => void,
+	delayMs: number = SERVE_DELAY_MS
+) => {
+	resetBall(ball, width, height, direction);
+	onPause(direction === 1 ? "RIGHT SERVES" : "LEFT SERVES");
+
+	setTimeout(() =>
+	{
+		onResume();
+	}, SERVE_DELAY_MS);
 };

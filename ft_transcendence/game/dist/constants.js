@@ -11,4 +11,4 @@ export const BALL_SPEED = 5;
 export const BALL_SPEEDUP = 1.06;
 export const BALL_MAX_SPEED = 14;
 // Pause after score
-export const SCORE_PAUSE_MS = 1200;
+export const SERVE_DELAY_MS = 1000;

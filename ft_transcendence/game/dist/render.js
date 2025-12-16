@@ -44,5 +44,5 @@ export const drawPausedOverlay = (ctx, msg, width, height) => {
     ctx.font = "32px Arial";
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.fillText("PAUSED (P to resume)", width / 2, height / 2);
+    ctx.fillText(msg, width / 2, height / 2);
 };

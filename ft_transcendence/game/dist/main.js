@@ -1,5 +1,5 @@
 import { MAX_SCORE, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED, BALL_RADIUS, BALL_SPEED, BALL_SPEEDUP, BALL_MAX_SPEED, } from "./constants";
-import { clamp, hitPaddle, resetBall } from "./physics";
+import { clamp, hitPaddle, serveBallWithDelay } from "./physics";
 import { drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay } from "./render";
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () => {
@@ -171,6 +171,14 @@ window.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("focus", () => {
         keys = {};
     });
+    const onPause = (msg) => {
+        pausedAuto = true;
+        pauseMessage = msg;
+    };
+    const onResume = () => {
+        pausedAuto = false;
+        pauseMessage = "";
+    };
     const isPaused = () => pausedManual || pausedAuto;
     /*//Small helper to keep values inside a range
     const	clamp = (value: number, min: number, max: number): number =>
@@ -262,14 +270,14 @@ window.addEventListener("DOMContentLoaded", () => {
                 rightScore++;
                 if (rightScore >= MAX_SCORE)
                     gameOver = true;
-                resetBall(ball, width, height, 1);
+                serveBallWithDelay(ball, width, height, 1, onPause, onResume);
                 return;
             }
             if (ball.x - ball.radius > width) {
                 leftScore++;
                 if (leftScore >= MAX_SCORE)
                     gameOver = true;
-                resetBall(ball, width, height, -1);
+                serveBallWithDelay(ball, width, height, -1, onPause, onResume);
                 return;
             }
         }
