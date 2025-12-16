@@ -24,8 +24,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const PADDLE_HEIGHT = 100;
     const PADDLE_MARGIN = 40;
     const PADDLE_SPEED = 6;
+    // Ball Constants
     const BALL_RADIUS = 10;
     const BALL_SPEED = 5;
+    const BALL_SPEEDUP = 1.06;
+    const BALL_MAX_SPEED = 14;
     // Left Paddle
     const leftPaddle = {
         x: PADDLE_MARGIN,
@@ -153,7 +156,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const resetBall = (direction) => {
         ball.x = width / 2;
         ball.y = height / 2;
-        ball.vx = direction * Math.abs(ball.vx);
+        ball.vx = direction * BALL_SPEED;
+        ball.vy = BALL_SPEED * 0.7;
     };
     // Update game state (movement)
     const update = () => {
@@ -180,6 +184,34 @@ window.addEventListener("DOMContentLoaded", () => {
         if (ball.y - ball.radius < 0 || ball.y + ball.radius > height) {
             ball.vy *= -1;
         }
+        // if ball going left
+        if (ball.vx < 0 && hitPaddle(leftPaddle)) {
+            console.log("Hit LEFT paddle");
+            // where did the ball hit the paddle ? 
+            const paddleCenter = leftPaddle.y + leftPaddle.height / 2;
+            const distanceFromCenter = ball.y - paddleCenter;
+            // Normalise -1 to 1
+            const normalized = distanceFromCenter / (leftPaddle.height / 2);
+            // Increase speed
+            const speed = Math.min(Math.hypot(ball.vx, ball.vy) + BALL_SPEEDUP, BALL_MAX_SPEED);
+            // Bounce right
+            ball.vx = Math.abs(speed);
+            ball.vy = normalized * speed;
+            // Push ball out to avoid sticking
+            ball.x = leftPaddle.x + leftPaddle.width + ball.radius;
+        }
+        // if ball going right
+        if (ball.vx > 0 && hitPaddle(rightPaddle)) {
+            console.log("Hit RIGHT paddle");
+            const paddleCenter = rightPaddle.y + rightPaddle.height / 2;
+            const distanceFromCenter = ball.y - paddleCenter;
+            const normalized = distanceFromCenter / (rightPaddle.height / 2);
+            const speed = Math.min(Math.hypot(ball.vx, ball.vy) + BALL_SPEEDUP, BALL_MAX_SPEED);
+            // Bounce left 
+            ball.vx = -Math.abs(speed);
+            ball.vy = normalized * speed;
+            ball.x = rightPaddle.x - ball.radius;
+        }
         // out of bounds scenario	
         if (ball.x + ball.radius < 0 || ball.x - ball.radius > width) {
             if (ball.x + ball.radius < 0) {
@@ -196,18 +228,6 @@ window.addEventListener("DOMContentLoaded", () => {
                 resetBall(-1);
                 return;
             }
-        }
-        // if ball going left
-        if (ball.vx < 0 && hitPaddle(leftPaddle)) {
-            console.log("Hit LEFT paddle");
-            ball.vx *= -1; // bounce to the right
-            ball.x = leftPaddle.x + leftPaddle.width + ball.radius; // nudge out of paddle
-        }
-        // if ball going right
-        if (ball.vx > 0 && hitPaddle(rightPaddle)) {
-            console.log("Hit RIGHT paddle");
-            ball.vx *= -1; // bounce to the left
-            ball.x = rightPaddle.x - ball.radius; // nudge of out paddle 
         }
     };
     //One frame render
