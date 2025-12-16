@@ -1,8 +1,18 @@
+import type { Paddle, Ball } from "./types";
+import {
+	MAX_SCORE,
+	PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED,
+	BALL_RADIUS, BALL_SPEED, BALLS_SPEEDUP, BALL_MAX_SPEED,
+} from "./constants";
+
+import { clamp, hitPaddle, resetBall } from "./physics";
+import {
+	drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay
+} from "./render";
+
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () =>
 {
-	console.log("Pong game created with TypeScript");
-
 	const	canvas = document.getElementById("pong") as HTMLCanvasElement | null;
 	if (!canvas)
 	{
@@ -21,7 +31,7 @@ window.addEventListener("DOMContentLoaded", () =>
 	const   width = canvas.width;
 	const   height = canvas.height;
 
-	type Paddle =
+	/*type Paddle =
 	{
 		x:      number;
 	    y:      number;
@@ -39,14 +49,14 @@ window.addEventListener("DOMContentLoaded", () =>
 		color:	string;
 		vx:		number;
 		vy:		number;
-	};
+	};*/
 
-	let		leftScore = 0;
-	let		rightScore = 0;
-	const	MAX_SCORE = 8;
-	let		gameOver = false;
+	let	leftScore = 0;
+	let	rightScore = 0;
+	/*const	MAX_SCORE = 8;*/
+	let	gameOver = false;
 
-	// Paddle Constants
+	/*// Paddle Constants
 	const	PADDLE_WIDTH = 20;
 	const	PADDLE_HEIGHT = 100;
 	const	PADDLE_MARGIN = 40;
@@ -56,11 +66,10 @@ window.addEventListener("DOMContentLoaded", () =>
 	const	BALL_RADIUS = 10;
 	const	BALL_SPEED = 5;
 	const	BALL_SPEEDUP = 1.06;
-	const	BALL_MAX_SPEED = 14;
+	const	BALL_MAX_SPEED = 14;*/
 
 	// Left Paddle
-	const	leftPaddle: Paddle = 
-	{
+	const	leftPaddle: Paddle = {
 		x:		PADDLE_MARGIN,
 		y:		(height - PADDLE_HEIGHT) / 2,
 		width:	PADDLE_WIDTH,
@@ -70,8 +79,7 @@ window.addEventListener("DOMContentLoaded", () =>
 	};
 
 	// Right Paddle
-	const	rightPaddle: Paddle =
-	{
+	const	rightPaddle: Paddle = {
 		x:		width - PADDLE_MARGIN - PADDLE_WIDTH,
 		y:		(height - PADDLE_HEIGHT) / 2,
 		width:	PADDLE_WIDTH,
@@ -80,8 +88,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		speed:	PADDLE_SPEED,
 	};
 	
-	const ball: Ball =
-	{
+	const ball: Ball = {
 		x:		width / 2,
 		y:		height / 2,
 		radius:	BALL_RADIUS,
@@ -90,7 +97,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		vy:		BALL_SPEED * 0.7, // slight diagonal
 	};
 
-	// Drawing Helpers
+	/*// Drawing Helpers
 	const	drawBackground = () =>
 	{
 		// Background color
@@ -155,7 +162,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		ctx.fillStyle = "white";
 		ctx.textAlign = "center";
 		ctx.fillText("PAUSED (P to resume)", width / 2, height / 2);
-	}
+	}*/
 
 	//Input handling (keyboard)
 	let keys:       Record<string, boolean> = {};
@@ -164,8 +171,7 @@ window.addEventListener("DOMContentLoaded", () =>
 	let	pausedAuto = false;
 	let	pauseMessage = "";
 
-	document.addEventListener("keydown", (e) =>
-	{
+	document.addEventListener("keydown", (e) => {
 		keys[e.key] = true;
 		if ((e.key === "p" || e.key === "P") && !e.repeat)
 		{
@@ -182,26 +188,23 @@ window.addEventListener("DOMContentLoaded", () =>
 		}
 	});
 
-	document.addEventListener("keyup", (e) =>
-	{
+	document.addEventListener("keyup", (e) => {
 		keys[e.key] = false;
 	});
 
-	window.addEventListener("blur", () =>
-	{
+	window.addEventListener("blur", () => {
 		pausedAuto = true;
 		pauseMessage = "PAUSED (press P to resume)";
 		keys = {};
 	});
 
-	window.addEventListener("focus", () =>
-	{
+	window.addEventListener("focus", () => {
 		keys = {};
 	});
 
 	const	isPaused = () => pausedManual || pausedAuto;
 
-	//Small helper to keep values inside a range
+	/*//Small helper to keep values inside a range
 	const	clamp = (value: number, min: number, max: number): number =>
 	{
 		return Math.max(min, Math.min(max, value));
@@ -231,11 +234,10 @@ window.addEventListener("DOMContentLoaded", () =>
 		ball.y = height /2;
 		ball.vx = direction * BALL_SPEED;
 		ball.vy = BALL_SPEED * 0.7;
-	};
+	};*/
 
 	// Update game state (movement)
-	const	update = () =>
-	{
+	const	update = () => {
 		console.log("Update frame, ball:", ball.x, ball.y,"vx:", ball.vx,  "vy:", ball.vy);
 		// Left Paddle: W (up), S (down)
 		if (keys["w"] || keys["W"])
@@ -305,7 +307,7 @@ window.addEventListener("DOMContentLoaded", () =>
 			const	paddleCenter = rightPaddle.y + rightPaddle.height / 2;
 			const	distanceFromCenter = ball.y - paddleCenter;
 			const	normalized = clamp(
-				distanceFromCenter / (leftPaddle.height / 2),
+				distanceFromCenter / (rightPaddle.height / 2),
 				-1,
 				1
 			);
@@ -330,7 +332,7 @@ window.addEventListener("DOMContentLoaded", () =>
 				rightScore++;
 				if (rightScore >= MAX_SCORE)
 					gameOver = true;
-				resetBall(1);
+				resetBall(ball, width, height, 1);
 				return;
 			}
 			if (ball.x - ball.radius > width)
@@ -338,7 +340,7 @@ window.addEventListener("DOMContentLoaded", () =>
 				leftScore++;
 				if (leftScore >= MAX_SCORE)
 					gameOver = true;
-				resetBall(-1);
+				resetBall(ball, width, height, -1);
 				return;
 			}
 		}
@@ -347,11 +349,11 @@ window.addEventListener("DOMContentLoaded", () =>
 	//One frame render
 	const	render = () =>
 	{
-		drawBackground();
-		drawScore();
-		drawPaddle(leftPaddle);
-		drawPaddle(rightPaddle);
-		drawBall();
+		drawBackground(ctx, width, height);
+		drawScore(ctx, leftScore, rightScore, width);
+		drawPaddle(ctx, leftPaddle);
+		drawPaddle(ctx, rightPaddle);
+		drawBall(ctx, ball);
 	};
 
 	// Main loop
@@ -360,7 +362,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		if (gameOver)
 		{
 			render();
-			drawGameOver();
+			drawGameOver(ctx, width, height, leftScore, rightScore);
 			return;
 		}
 
@@ -370,11 +372,11 @@ window.addEventListener("DOMContentLoaded", () =>
 		render();
 
 		if (isPaused())
-			drawPausedOverlay(pauseMessage);
+			drawPausedOverlay(ctx, pauseMessage || "PAUSED", width, height);
 
 		requestAnimationFrame(loop);
 	};
 
 	console.log("Paddles drawn:", { leftPaddle, rightPaddle });
 	loop();
-});
+});*/
