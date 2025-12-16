@@ -61,7 +61,7 @@ export const	drawGameOver = (
 };
 
 export const	drawPausedOverlay = (
-	ctx:	CanvasRenderingContext2d,	
+	ctx:	CanvasRenderingContext2D,	
 	msg:	string,
 	width:	number,
 	height:	number

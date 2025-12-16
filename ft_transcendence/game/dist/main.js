@@ -1,7 +1,8 @@
-"use strict";
+import { MAX_SCORE, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED, BALL_RADIUS, BALL_SPEED, BALL_SPEEDUP, BALL_MAX_SPEED, } from "./constants";
+import { clamp, hitPaddle, resetBall } from "./physics";
+import { drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay } from "./render";
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () => {
-    console.log("Pong game created with TypeScript");
     const canvas = document.getElementById("pong");
     if (!canvas) {
         console.error("Canvas with id 'pong' not found");
@@ -15,20 +16,40 @@ window.addEventListener("DOMContentLoaded", () => {
     // Canvas dimensions
     const width = canvas.width;
     const height = canvas.height;
+    /*type Paddle =
+    {
+        x:      number;
+        y:      number;
+        width:  number;
+        height: number;
+        color:  string;
+        speed:	number;
+    };
+    
+    type	Ball =
+    {
+        x:		number;
+        y:		number;
+        radius:	number;
+        color:	string;
+        vx:		number;
+        vy:		number;
+    };*/
     let leftScore = 0;
     let rightScore = 0;
-    const MAX_SCORE = 8;
+    /*const	MAX_SCORE = 8;*/
     let gameOver = false;
-    // Paddle Constants
-    const PADDLE_WIDTH = 20;
-    const PADDLE_HEIGHT = 100;
-    const PADDLE_MARGIN = 40;
-    const PADDLE_SPEED = 6;
+    /*// Paddle Constants
+    const	PADDLE_WIDTH = 20;
+    const	PADDLE_HEIGHT = 100;
+    const	PADDLE_MARGIN = 40;
+    const	PADDLE_SPEED = 6;
+    
     // Ball Constants
-    const BALL_RADIUS = 10;
-    const BALL_SPEED = 5;
-    const BALL_SPEEDUP = 1.06;
-    const BALL_MAX_SPEED = 14;
+    const	BALL_RADIUS = 10;
+    const	BALL_SPEED = 5;
+    const	BALL_SPEEDUP = 1.06;
+    const	BALL_MAX_SPEED = 14;*/
     // Left Paddle
     const leftPaddle = {
         x: PADDLE_MARGIN,
@@ -55,11 +76,13 @@ window.addEventListener("DOMContentLoaded", () => {
         vx: BALL_SPEED, // start moving to right
         vy: BALL_SPEED * 0.7, // slight diagonal
     };
-    // Drawing Helpers
-    const drawBackground = () => {
+    /*// Drawing Helpers
+    const	drawBackground = () =>
+    {
         // Background color
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, width, height);
+
         // Center dashed line
         ctx.strokeStyle = "gray";
         ctx.setLineDash([10, 10]);
@@ -69,30 +92,41 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.stroke();
         ctx.setLineDash([]); // reset to solid
     };
-    const drawPaddle = (p) => {
+
+    const	drawPaddle = (p: Paddle) =>
+    {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, p.width, p.height);
     };
-    const drawBall = () => {
+    
+    const	drawBall = () =>
+    {
         ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI *2);
         ctx.fillStyle = ball.color;
         ctx.fill();
         ctx.closePath();
     };
-    const drawScore = () => {
-        ctx.font = "32px Arial";
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.fillText(leftScore.toString(), width / 4, 50);
-        ctx.fillText(rightScore.toString(), (width * 3) / 4, 50);
+
+    const	drawScore = () =>
+    {
+            ctx.font = "32px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+
+            ctx.fillText(leftScore.toString(), width / 4, 50);
+            ctx.fillText(rightScore.toString(), (width * 3) / 4, 50);
     };
-    const drawGameOver = () => {
+
+    const	drawGameOver = () =>
+    {
         ctx.fillStyle = "white";
+
         ctx.font = "48px Arial";
         ctx.textAlign = "center";
+
         ctx.fillText("GAME OVER", width / 2, height / 2 - 20);
-        let winnerText = "";
+        let	winnerText = "";
         if (leftScore > rightScore)
             winnerText = "Left Player Wins!";
         else if (rightScore > leftScore)
@@ -100,12 +134,14 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.font = "32px Arial";
         ctx.fillText(winnerText, width / 2, height / 2 + 30);
     };
-    const drawPausedOverlay = (msg) => {
+
+    const	drawPausedOverlay = (msg: string) =>
+    {
         ctx.font = "32px Arial";
         ctx.fillStyle = "white";
         ctx.textAlign = "center";
         ctx.fillText("PAUSED (P to resume)", width / 2, height / 2);
-    };
+    }*/
     //Input handling (keyboard)
     let keys = {};
     let pausedManual = false;
@@ -136,29 +172,37 @@ window.addEventListener("DOMContentLoaded", () => {
         keys = {};
     });
     const isPaused = () => pausedManual || pausedAuto;
-    //Small helper to keep values inside a range
-    const clamp = (value, min, max) => {
+    /*//Small helper to keep values inside a range
+    const	clamp = (value: number, min: number, max: number): number =>
+    {
         return Math.max(min, Math.min(max, value));
     };
-    const hitPaddle = (p) => {
-        const paddleLeft = p.x;
-        const paddleRight = p.x + p.width;
-        const paddleTop = p.y;
-        const paddleBottom = p.y + p.height;
-        const ballLeft = ball.x - ball.radius;
-        const ballRight = ball.x + ball.radius;
-        const ballTop = ball.y - ball.radius;
-        const ballBottom = ball.y + ball.radius;
-        const overlapX = ballRight > paddleLeft && ballLeft < paddleRight;
-        const overlapY = ballBottom > paddleTop && ballTop < paddleBottom;
-        return overlapX && overlapY;
+
+    const	hitPaddle = (p: Paddle): boolean =>
+    {
+            const	paddleLeft = p.x;
+            const	paddleRight = p.x + p.width;
+            const	paddleTop = p.y;
+            const	paddleBottom = p.y + p.height;
+
+            const	ballLeft = ball.x - ball.radius;
+            const	ballRight = ball.x + ball.radius;
+            const	ballTop = ball.y - ball.radius;
+            const	ballBottom = ball.y + ball.radius;
+
+            const	overlapX = ballRight > paddleLeft && ballLeft < paddleRight;
+            const 	overlapY = ballBottom > paddleTop && ballTop < paddleBottom;
+
+            return overlapX && overlapY;
     };
-    const resetBall = (direction) => {
+
+    const	resetBall = (direction: 1 | -1) =>
+    {
         ball.x = width / 2;
-        ball.y = height / 2;
+        ball.y = height /2;
         ball.vx = direction * BALL_SPEED;
         ball.vy = BALL_SPEED * 0.7;
-    };
+    };*/
     // Update game state (movement)
     const update = () => {
         console.log("Update frame, ball:", ball.x, ball.y, "vx:", ball.vx, "vy:", ball.vy);
@@ -185,7 +229,7 @@ window.addEventListener("DOMContentLoaded", () => {
             ball.vy *= -1;
         }
         // if ball going left
-        if (ball.vx < 0 && hitPaddle(leftPaddle)) {
+        if (ball.vx < 0 && hitPaddle(leftPaddle, ball)) {
             console.log("Hit LEFT paddle");
             // where did the ball hit the paddle ? 
             const paddleCenter = leftPaddle.y + leftPaddle.height / 2;
@@ -201,11 +245,11 @@ window.addEventListener("DOMContentLoaded", () => {
             ball.x = leftPaddle.x + leftPaddle.width + ball.radius;
         }
         // if ball going right
-        if (ball.vx > 0 && hitPaddle(rightPaddle)) {
+        if (ball.vx > 0 && hitPaddle(rightPaddle, ball)) {
             console.log("Hit RIGHT paddle");
             const paddleCenter = rightPaddle.y + rightPaddle.height / 2;
             const distanceFromCenter = ball.y - paddleCenter;
-            const normalized = clamp(distanceFromCenter / (leftPaddle.height / 2), -1, 1);
+            const normalized = clamp(distanceFromCenter / (rightPaddle.height / 2), -1, 1);
             const speed = Math.min(Math.hypot(ball.vx, ball.vy) * BALL_SPEEDUP, BALL_MAX_SPEED);
             // Bounce left 
             ball.vx = -Math.abs(speed);
@@ -218,38 +262,38 @@ window.addEventListener("DOMContentLoaded", () => {
                 rightScore++;
                 if (rightScore >= MAX_SCORE)
                     gameOver = true;
-                resetBall(1);
+                resetBall(ball, width, height, 1);
                 return;
             }
             if (ball.x - ball.radius > width) {
                 leftScore++;
                 if (leftScore >= MAX_SCORE)
                     gameOver = true;
-                resetBall(-1);
+                resetBall(ball, width, height, -1);
                 return;
             }
         }
     };
     //One frame render
     const render = () => {
-        drawBackground();
-        drawScore();
-        drawPaddle(leftPaddle);
-        drawPaddle(rightPaddle);
-        drawBall();
+        drawBackground(ctx, width, height);
+        drawScore(ctx, leftScore, rightScore, width);
+        drawPaddle(ctx, leftPaddle);
+        drawPaddle(ctx, rightPaddle);
+        drawBall(ctx, ball);
     };
     // Main loop
     const loop = () => {
         if (gameOver) {
             render();
-            drawGameOver();
+            drawGameOver(ctx, width, height, leftScore, rightScore);
             return;
         }
         if (!isPaused())
             update();
         render();
         if (isPaused())
-            drawPausedOverlay(pauseMessage);
+            drawPausedOverlay(ctx, pauseMessage || "PAUSED", width, height);
         requestAnimationFrame(loop);
     };
     console.log("Paddles drawn:", { leftPaddle, rightPaddle });

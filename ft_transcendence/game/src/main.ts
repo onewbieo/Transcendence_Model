@@ -2,7 +2,7 @@ import type { Paddle, Ball } from "./types";
 import {
 	MAX_SCORE,
 	PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_MARGIN, PADDLE_SPEED,
-	BALL_RADIUS, BALL_SPEED, BALLS_SPEEDUP, BALL_MAX_SPEED,
+	BALL_RADIUS, BALL_SPEED, BALL_SPEEDUP, BALL_MAX_SPEED,
 } from "./constants";
 
 import { clamp, hitPaddle, resetBall } from "./physics";
@@ -271,7 +271,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		}
 
 		// if ball going left
-		if (ball.vx < 0 && hitPaddle(leftPaddle))
+		if (ball.vx < 0 && hitPaddle(leftPaddle, ball))
 		{
 			console.log("Hit LEFT paddle");
 			// where did the ball hit the paddle ? 
@@ -300,7 +300,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		}
 
 		// if ball going right
-		if (ball.vx > 0 && hitPaddle(rightPaddle))
+		if (ball.vx > 0 && hitPaddle(rightPaddle, ball))
 		{
 			console.log("Hit RIGHT paddle");
 			
@@ -379,4 +379,4 @@ window.addEventListener("DOMContentLoaded", () =>
 
 	console.log("Paddles drawn:", { leftPaddle, rightPaddle });
 	loop();
-});*/
+});
