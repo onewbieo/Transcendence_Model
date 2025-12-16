@@ -31,42 +31,9 @@ window.addEventListener("DOMContentLoaded", () =>
 	const   width = canvas.width;
 	const   height = canvas.height;
 
-	/*type Paddle =
-	{
-		x:      number;
-	    y:      number;
-	    width:  number;
-	    height: number;
-	    color:  string;
-		speed:	number;
-	};
-	
-	type	Ball = 
-	{
-		x:		number;
-		y:		number;
-		radius:	number;
-		color:	string;
-		vx:		number;
-		vy:		number;
-	};*/
-
 	let	leftScore = 0;
 	let	rightScore = 0;
-	/*const	MAX_SCORE = 8;*/
 	let	gameOver = false;
-
-	/*// Paddle Constants
-	const	PADDLE_WIDTH = 20;
-	const	PADDLE_HEIGHT = 100;
-	const	PADDLE_MARGIN = 40;
-	const	PADDLE_SPEED = 6;
-	
-	// Ball Constants
-	const	BALL_RADIUS = 10;
-	const	BALL_SPEED = 5;
-	const	BALL_SPEEDUP = 1.06;
-	const	BALL_MAX_SPEED = 14;*/
 
 	// Left Paddle
 	const	leftPaddle: Paddle = {
@@ -96,73 +63,6 @@ window.addEventListener("DOMContentLoaded", () =>
 		vx:		BALL_SPEED, // start moving to right
 		vy:		BALL_SPEED * 0.7, // slight diagonal
 	};
-
-	/*// Drawing Helpers
-	const	drawBackground = () =>
-	{
-		// Background color
-		ctx.fillStyle = "black";
-		ctx.fillRect(0, 0, width, height);
-
-		// Center dashed line
-		ctx.strokeStyle = "gray";
-		ctx.setLineDash([10, 10]);
-		ctx.beginPath();
-		ctx.moveTo(width / 2, 0);
-		ctx.lineTo(width / 2, height);
-		ctx.stroke();
-		ctx.setLineDash([]); // reset to solid
-	};
-
-	const	drawPaddle = (p: Paddle) =>
-	{
-		ctx.fillStyle = p.color;
-		ctx.fillRect(p.x, p.y, p.width, p.height);
-	};
-	
-	const	drawBall = () =>
-	{
-		ctx.beginPath();
-		ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI *2);
-		ctx.fillStyle = ball.color;
-		ctx.fill();
-		ctx.closePath();
-	};
-
-	const	drawScore = () =>
-	{
-			ctx.font = "32px Arial";
-			ctx.fillStyle = "white";
-			ctx.textAlign = "center";
-
-			ctx.fillText(leftScore.toString(), width / 4, 50);
-			ctx.fillText(rightScore.toString(), (width * 3) / 4, 50);
-	};
-
-	const	drawGameOver = () =>
-	{
-		ctx.fillStyle = "white";
-
-		ctx.font = "48px Arial";
-		ctx.textAlign = "center";
-
-		ctx.fillText("GAME OVER", width / 2, height / 2 - 20);
-		let	winnerText = "";
-		if (leftScore > rightScore)
-			winnerText = "Left Player Wins!";
-		else if (rightScore > leftScore)
-			winnerText = "Right Player Wins!";
-		ctx.font = "32px Arial";
-		ctx.fillText(winnerText, width / 2, height / 2 + 30);
-	};
-
-	const	drawPausedOverlay = (msg: string) =>
-	{
-		ctx.font = "32px Arial";
-		ctx.fillStyle = "white";
-		ctx.textAlign = "center";
-		ctx.fillText("PAUSED (P to resume)", width / 2, height / 2);
-	}*/
 
 	//Input handling (keyboard)
 	let keys:       Record<string, boolean> = {};
@@ -215,38 +115,6 @@ window.addEventListener("DOMContentLoaded", () =>
 	};
 
 	const	isPaused = () => pausedManual || pausedAuto;
-
-	/*//Small helper to keep values inside a range
-	const	clamp = (value: number, min: number, max: number): number =>
-	{
-		return Math.max(min, Math.min(max, value));
-	};
-
-	const	hitPaddle = (p: Paddle): boolean =>
-	{
-			const	paddleLeft = p.x;
-			const	paddleRight = p.x + p.width;
-			const	paddleTop = p.y;
-			const	paddleBottom = p.y + p.height;
-
-			const	ballLeft = ball.x - ball.radius;
-			const	ballRight = ball.x + ball.radius;
-			const	ballTop = ball.y - ball.radius;
-			const	ballBottom = ball.y + ball.radius;
-
-			const	overlapX = ballRight > paddleLeft && ballLeft < paddleRight;
-			const 	overlapY = ballBottom > paddleTop && ballTop < paddleBottom;
-
-			return overlapX && overlapY;
-	};
-
-	const	resetBall = (direction: 1 | -1) =>
-	{
-		ball.x = width / 2;
-		ball.y = height /2;
-		ball.vx = direction * BALL_SPEED;
-		ball.vy = BALL_SPEED * 0.7;
-	};*/
 
 	// Update game state (movement)
 	const	update = () => {
