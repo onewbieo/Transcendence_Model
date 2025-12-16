@@ -277,11 +277,15 @@ window.addEventListener("DOMContentLoaded", () =>
 			const	distanceFromCenter = ball.y - paddleCenter;
 
 			// Normalise -1 to 1
-			const	normalized = distanceFromCenter / (leftPaddle.height / 2);
+			const	normalized = clamp(
+				distanceFromCenter / (leftPaddle.height / 2),
+				-1,
+				1
+			);
 
 			// Increase speed
 			const	speed = Math.min(
-				Math.hypot(ball.vx, ball.vy) + BALL_SPEEDUP,
+				Math.hypot(ball.vx, ball.vy) * BALL_SPEEDUP,
 				BALL_MAX_SPEED
 			);
 
@@ -300,10 +304,14 @@ window.addEventListener("DOMContentLoaded", () =>
 			
 			const	paddleCenter = rightPaddle.y + rightPaddle.height / 2;
 			const	distanceFromCenter = ball.y - paddleCenter;
-			const	normalized = distanceFromCenter / (rightPaddle.height / 2);
+			const	normalized = clamp(
+				distanceFromCenter / (leftPaddle.height / 2),
+				-1,
+				1
+			);
 
 			const	speed = Math.min(
-				Math.hypot(ball.vx, ball.vy) + BALL_SPEEDUP,
+				Math.hypot(ball.vx, ball.vy) * BALL_SPEEDUP,
 				BALL_MAX_SPEED
 			);
 
