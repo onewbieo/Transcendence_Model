@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
 
 export async function userRoutes(app: FastifyInstance) {
-  // GET /users (list all users)   // READ //
+  /*// GET /users (list all users)   // READ //
   app.get("/users", async () => {
   	return prisma.user.findMany({
   	  select: { id: true, email: true, name: true, createdAt: true },
@@ -28,7 +28,7 @@ export async function userRoutes(app: FastifyInstance) {
     }
     
     return user;
-  });
+  });*/
   
   // GET /users/me (protected)
   app.get("/users/me", { preHandler: (app as any).authenticate }, async (req: any) => {
@@ -59,6 +59,51 @@ export async function userRoutes(app: FastifyInstance) {
     });
     
     return reply.send(user);
+  });
+  
+  // PATCH /users/me/password (protected)
+  app.patch("/users/me/password", { preHandler: (app as any).authenticate }, async (req: any, reply) => {
+    const payload = req.user as { sub: number };
+    
+    const body = req.body as {
+      oldPassword?: string;
+      newPassword?: string;
+    };
+    
+    if (!body.oldPassword || !body.newPassword) {
+      return reply.code(400).send({
+        error: "oldPassword and newPassword are required",
+      });
+    }
+    
+    if (body.newPassword.length < 8) {
+      return reply.code(400).send({
+        error: "new password must be at least 8 characters",
+      });
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+    
+    if (!user) {
+      return reply.code(404).send({ error: "user not found" });
+    }
+    
+    const ok = await bcrypt.compare(body.oldPassword, user.passwordHash);
+    if (!ok) {
+      return reply.code(401).send({ error: "invalid old password" });
+    }
+    
+    const newHash = await bcrypt.hash(body.newPassword, 10);
+    
+    await prisma.user.update({
+      where: {id: payload.sub },
+      data: { passwordHash: newHash },
+    });
+    
+    return reply.send({ ok: true });
+    }
   });
     
   /*// POST /users (create user) // CREATE //
