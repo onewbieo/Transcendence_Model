@@ -6,17 +6,8 @@ type JwtPayload = { sub: number; email: string };
 
 export async function authRoutes(app: FastifyInstance) {
   app.log.info("authRoutes registered");
-  // helper: verify JWT for protected routes
-  app.decorate("authenticate", async (req:any, reply: any) => {
-    try {
-      await req.jwtVerify();
-    }
-    catch {
-      return reply.code(401).send({ error: "unauthorized" });
-    }
-  });
   
-  // POST /auth/signup
+  // POST /auth/signup // creates a user, issues a token after that //
   app.post("/auth/signup", async (req, reply) => {
     const body = req.body as { email?: string; password?: string; name?: string };
     
@@ -43,7 +34,7 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(201).send({ user, token });
   }); 
   
-  // POST /auth/login
+  // POST /auth/login // compares and issues a new token //
   app.post("/auth/login", async (req, reply) => {
     const body = req.body as { email?: string; password?: string };
     
@@ -69,7 +60,7 @@ export async function authRoutes(app: FastifyInstance) {
     });
   });
   
-  // GET /auth/me (protected)
+  // GET /auth/me (protected) // who am i logged in right now ? //
   app.get("/auth/me", { preHandler: (app as any).authenticate }, async (req: any) => {
     const payload = req.user as JwtPayload;
     

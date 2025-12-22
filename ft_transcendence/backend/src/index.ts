@@ -16,6 +16,15 @@ async function main() {
     secret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   });
   
+  app.decorate("authenticate", async (req: any, reply: any) => {
+    try {
+      await req.jwtVerify();
+    }
+    catch {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+  });
+  
   await app.register(healthRoutes);
   await app.register(userRoutes);
   await app.register(authRoutes);

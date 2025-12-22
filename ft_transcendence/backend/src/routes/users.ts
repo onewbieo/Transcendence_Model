@@ -3,14 +3,14 @@ import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
 
 export async function userRoutes(app: FastifyInstance) {
-  // GET /users (list all users)   
+  // GET /users (list all users)   // READ //
   app.get("/users", async () => {
   	return prisma.user.findMany({
   	  select: { id: true, email: true, name: true, createdAt: true },
   	});
   });
   
-  // GET /users/:id (get one user)
+  // GET /users/:id (get one user) // READ //
   app.get("/users/:id", async (req, reply) => {
     const params = req.params as { id: string };
     const id = Number(params.id);
@@ -21,7 +21,6 @@ export async function userRoutes(app: FastifyInstance) {
     
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, createdAt: true },
     });
     
     if (!user) {
@@ -30,8 +29,39 @@ export async function userRoutes(app: FastifyInstance) {
     
     return user;
   });
+  
+  // GET /users/me (protected)
+  app.get("/users/me", { preHandler: (app as any).authenticate }, async (req: any) => {
+    const payload = req.user as { sub: number; email: string };
     
-  // POST /users (create user)
+    const me = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, name: true, createdAt: true },
+    });
+    
+    return { me };
+  });
+  
+  // PATCH /users/me (protected) update my profile
+  app.patch("/users/me", { preHandler: (app as any).authenticate }, async (req: any, reply) => {
+    const payload = req.user as { sub: number; email: string };
+    const body = req.body as { name?: string };
+    
+    const name = body.name?.trim();
+    if (name !== undefined && name.length === 0) {
+      return reply.code(400).send({ error: "name cannot be empty" });
+    }
+    
+    const user = await prisma.user.update({
+      where: { id: payload.sub },
+      data: { name: name ?? undefined },
+      select: { id: true, email: true, name: true, createdAt: true },
+    });
+    
+    return reply.send(user);
+  });
+    
+  /*// POST /users (create user) // CREATE //
   app.post("/users", async (req, reply) => {
     const body = req.body as {
       email?: string;
@@ -70,7 +100,7 @@ export async function userRoutes(app: FastifyInstance) {
     return reply.code(201).send(user);
   });
   
-  // PATCH /users/:id (update user fields, e.g. name)
+  // PATCH /users/:id (update user fields, e.g. name) // UPDATE //
   app.patch("/users/:id", async (req, reply) => {
     const params = req.params as { id: string };
     const id = Number(params.id);
@@ -112,7 +142,7 @@ export async function userRoutes(app: FastifyInstance) {
      }
   });
   
-  // DELETE /users/:id (delete user)
+  // DELETE /users/:id (delete user) // DELETE //
   app.delete("/users/:id", async (req, reply) => {
     const params = req.params as { id: string };
     const id = Number(params.id);
@@ -132,5 +162,5 @@ export async function userRoutes(app: FastifyInstance) {
       req.log.error(err);
       return reply.code(500).send({ error: "internal error" });
     }
-  });
+  });*/
 }
