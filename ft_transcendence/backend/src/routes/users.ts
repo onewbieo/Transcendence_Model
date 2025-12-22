@@ -104,7 +104,7 @@ export async function userRoutes(app: FastifyInstance) {
     
     return reply.send({ ok: true });
     }
-  });
+  );
     
   /*// POST /users (create user) // CREATE //
   app.post("/users", async (req, reply) => {
