@@ -89,10 +89,35 @@ export async function userRoutes(app: FastifyInstance) {
     }
   );
   
+  // GET /users/:id (protected) - view another user's public profile
+  app.get(
+    "/users/:id",
+    { preHandler: (app as any).authenticate },
+    async (req: any, reply) => {
+      const params = req.params as { id: string };
+      const id = Number(params.id);
+
+      if (!Number.isFinite(id)) {
+        return reply.code(400).send({ error: "invalid id" });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, name: true, createdAt: true }, // keep it simple
+      });
+
+      if (!user) {
+        return reply.code(404).send({ error: "user not found" });
+      }
+
+      return reply.send({ user });
+    }
+  );
+  
   // ADMIN ROUTES after
   // GET /users (list all users)   // READ //
   app.get(
-    "/users",
+    "/admin/users",
     { preHandler: (app as any).authorizeAdmin },
     async () => {
   	return prisma.user.findMany({
@@ -103,7 +128,7 @@ export async function userRoutes(app: FastifyInstance) {
   
   // GET /users/:id (get one user) // READ //
   app.get(
-    "/users/:id",
+    "/admin/users/:id",
     { preHandler: (app as any).authorizeAdmin },
     async (req, reply) => {
     const params = req.params as { id: string };
@@ -127,7 +152,7 @@ export async function userRoutes(app: FastifyInstance) {
   
   // PATCH /users/:id (update user fields, e.g. name) // UPDATE //
   app.patch(
-    "/users/:id",
+    "/admin/users/:id",
     { preHandler: (app as any).authorizeAdmin }, 
     async (req, reply) => {
     const params = req.params as { id: string };
@@ -209,9 +234,9 @@ export async function userRoutes(app: FastifyInstance) {
     return reply.code(201).send(user);
   });*/
   
-  // DELETE /users/:id (delete user) // DELETE //
+  // DELETE /admin/users/:id (delete user) // DELETE //
   app.delete(
-    "/users/:id",
+    "/admin/users/:id",
     { preHandler: (app as any).authorizeAdmin }, 
     async (req, reply) => {
     const params = req.params as { id: string };

@@ -31,7 +31,7 @@ export async function authRoutes(app: FastifyInstance) {
     
     const user = await prisma.user.create({
       data: { email, name: body.name ?? null, passwordHash },
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
     
     const token = app.jwt.sign({

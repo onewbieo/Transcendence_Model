@@ -5,6 +5,7 @@ import jwt from "@fastify/jwt";
 import { healthRoutes } from "./routes/health";
 import { userRoutes } from "./routes/users";
 import { authRoutes } from "./routes/auth";
+import { matchRoutes } from "./routes/matches";
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -40,10 +41,11 @@ async function main() {
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(userRoutes);
+  await app.register(matchRoutes);
   
   app.get("/", async () => ({
   	ok: true,
-  	routes: ["/health", "/users", "/auth/signup", "/auth/login", "/auth/me"],
+  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id",],
   }));
   
   await app.listen({ host: "0.0.0.0", port: 3000 });
