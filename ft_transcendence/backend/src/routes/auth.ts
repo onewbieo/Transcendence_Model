@@ -2,7 +2,11 @@ import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
 
-type JwtPayload = { sub: number; email: string };
+type JwtPayload = {
+  sub: number;
+  email: string;
+  role: "USER" | "ADMIN";
+};
 
 export async function authRoutes(app: FastifyInstance) {
   app.log.info("authRoutes registered");
@@ -30,7 +34,12 @@ export async function authRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, createdAt: true },
     });
     
-    const token = app.jwt.sign({ sub: user.id, email: user.email } satisfies JwtPayload);
+    const token = app.jwt.sign({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    } satisfies JwtPayload);
+    
     return reply.code(201).send({ user, token });
   }); 
   
@@ -52,7 +61,11 @@ export async function authRoutes(app: FastifyInstance) {
     if (!ok)
       return reply.code(401).send({ error: "invalid credentials" });
       
-    const token = app.jwt.sign({ sub: user.id, email: user.email } satisfies JwtPayload);
+    const token = app.jwt.sign({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    } satisfies JwtPayload);
     
     return reply.send({
       user: { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt },
@@ -66,7 +79,7 @@ export async function authRoutes(app: FastifyInstance) {
     
     const me = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
     
     return { me };

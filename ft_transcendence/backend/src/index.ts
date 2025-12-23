@@ -25,9 +25,21 @@ async function main() {
     }
   });
   
+  app.decorate("authorizeAdmin", async (req: any, reply: any) => {
+    try {
+      await req.jwtVerify();
+      if (req.user.role !== "ADMIN") {
+        return reply.code(403).send({ error: "forbidden" });
+      }
+    }
+    catch {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+  });
+  
   await app.register(healthRoutes);
-  await app.register(userRoutes);
   await app.register(authRoutes);
+  await app.register(userRoutes);
   
   app.get("/", async () => ({
   	ok: true,
