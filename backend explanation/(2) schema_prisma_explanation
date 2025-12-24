@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js" // Tells Prisma to generate JS/TS client so i can use prisma.user.findUnique
+}
+
+datasource db {
+  provider = "postgresql" // Tells Prisma my DB is postgres //
+}
+
+enum Role {
+  USER // i have a user account //
+  ADMIN // i have an admin account //
+}
+
+enum MatchStatus {
+  FINISHED // Match can be finished means a winner // 
+  ABORTED // Aborted due to issues // 
+}
+
+model User {
+  id            Int      @id @default(autoincrement()) // id number in the table //
+  email         String   @unique // e-mail address unique means e-mail cannot be registered twice //
+  name          String?  // name of user //
+  passwordHash  String   // after entering password, it will be hashed //
+  role          Role     @default(USER) // anyone being created at first will be normal User //
+  createdAt     DateTime @default(now()) // Time user is created // 
+  
+  matchesAsP1   Match[]  @relation("MatchPlayer1") // matches where user is player 1 //
+  matchesAsP2   Match[]  @relation("MatchPlayer2") // matches where user is player 2 //
+  wins          Match[]  @relation("MatchWinner") // matches where user is winner //
+}
+
+model Match {
+  id            Int           @id @default(autoincrement()) // match id //
+  createdAt     DateTime      @default(now()) // time matches is created // 
+  
+  status        MatchStatus   @default(FINISHED) // match status // 
+  
+  // players (always PVP) //
+  player1Id     Int // first player ID //
+  player2Id     Int // second player ID //
+  
+  player1       User          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: Restrict) // player1Id uses the column player1Id in match // // id uses the id column in user // // onDelete : restrict means if a user still has matches you cant delete that user //
+  player2       User          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: Restrict) // player2Id uses the column player2Id in match // // id uses the id column in user // // onDelete : restrict means if a user still has matches you cant delete that user //
+  
+  // score //
+  player1Score  Int	// player1 Score //
+  player2Score  Int	// player2 Score //
+  
+  // winner (null only if draw or aborted) //
+  winnerId      Int?
+  winner        User?         @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  // if winner gets deleted, match stays, but winnerId becomes null //
+  
+  durationMs    Int?	// duration of match in Ms //
+  
+  @@index([player1Id, createdAt]) // show me all matches where i was player 1 //
+  @@index([player2Id, createdAt]) // show me all matches where i was player 2 //
+  @@index([winnerId]) // show me all matches where i won // 
+}
+
+? means it can be NULL
+@relation shows you how 2 tables are connected. 
+fields = which column(s) in Match holds the foreign key
+references = which column(s) in User it points to
+
+User has basic fields and a Role enum for admin checks. Match stores results and references two User rows as player1/player2 using foreign keys. The winner is optional because draws or aborted matches can exist. Players are Restrict on delete to prevent broken match history, but winner is SetNull so a match record can still exist even if the winner user is removed. Indexes exist on player ids and winnerId because match history and leaderboard query those fields a lot.
+
+schema.prisma (your source of truth)
+   │
+   ├─ defines enums: Role, MatchStatus
+   ├─ defines models: User, Match
+   ├─ defines relations + onDelete rules + indexes
+   │
+   ▼
+npx prisma migrate dev
+   │
+   ├─ creates SQL migration files
+   └─ applies SQL to Postgres
+       (creates tables + columns + constraints + indexes)
+   │
+   ▼
+PostgreSQL schema
+   ├─ User table
+   ├─ Match table
+   ├─ FK constraints (player1Id→User.id, player2Id→User.id, winnerId→User.id)
+   └─ indexes (player1Id+createdAt, player2Id+createdAt, winnerId)
+   │
+   ▼
+npx prisma generate
+   │
+   └─ generates Prisma Client code
+       (TypeScript-safe API for User/Match/enums)
+   │
+   ▼
+Your code can now do:
+prisma.user.findUnique(...)
+prisma.match.create(...)
+prisma.match.groupBy(...)
+
+
+
+
+
