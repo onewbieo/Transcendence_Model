@@ -89,6 +89,28 @@ export async function authRoutes(app: FastifyInstance) { // this function receiv
   });
 }
 
+Client request
+   ↓
+Fastify route matched
+   ↓
+preHandler: authenticate
+   ↓
+req.jwtVerify()
+   ↓
+JWT payload decoded
+   ↓
+req.user populated
+   ↓
+Your route handler runs
+
+
+req.body      // JSON body (POST / PATCH)
+req.params    // URL params  (/users/:id)
+req.query     // Query string (?page=1)
+req.headers   // HTTP headers
+req.method    // GET / POST / PATCH
+req.url       // Full URL
+
 
 Signup/Login
    │
