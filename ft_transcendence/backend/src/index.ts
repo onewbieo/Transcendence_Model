@@ -1,11 +1,13 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
+import websocket from "@fastify/websocket";
 
 import { healthRoutes } from "./routes/health";
 import { userRoutes } from "./routes/users";
 import { authRoutes } from "./routes/auth";
 import { matchRoutes } from "./routes/matches";
+import { gameWs } from "./ws/game.ws";
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -38,6 +40,8 @@ async function main() {
     }
   });
   
+  await app.register(websocket);
+  await app.register(gameWs);
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(userRoutes);
