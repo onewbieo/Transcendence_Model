@@ -3,6 +3,70 @@ import { clamp, hitPaddle, serveBallWithDelay } from "./physics.js";
 import { drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay } from "./render.js";
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () => {
+    let matched = false;
+    let gameOver = false;
+    let pausedManual = false;
+    let pausedAuto = false;
+    let pauseMessage = "";
+    let youAre = null;
+    // authoritative state from server
+    let serverBall = null;
+    let serverP1Y = 0;
+    let serverP2Y = 0;
+    let serverScoreL = 0;
+    let serverScoreR = 0;
+    const WS_URL = "ws://10.0.2.15:3000/ws/game"; // OR localhost if browser runs inside VM
+    const ws = new WebSocket(WS_URL);
+    function sendInput(dir, pressed) {
+        if (!matched)
+            return;
+        if (!youAre)
+            return;
+        if (ws.readyState !== WebSocket.OPEN)
+            return;
+        ws.send(JSON.stringify({ type: "game:input", dir, pressed }));
+    }
+    ws.onopen = () => {
+        console.log("WS open");
+        ws.send(JSON.stringify({ type: "queue:join" }));
+    };
+    ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "match:found") {
+            matched = true;
+            youAre = msg.youAre;
+            console.log("Matched:", msg);
+            return;
+        }
+        ;
+        if (msg.type === "game:state") {
+            pausedAuto = msg.paused;
+            pauseMessage = msg.paused ? "PAUSED" : "";
+            serverP1Y = msg.p1.y;
+            serverP2Y = msg.p2.y;
+            serverScoreL = msg.score.p1;
+            serverScoreR = msg.score.p2;
+            serverBall = {
+                x: msg.ball.x,
+                y: msg.ball.y,
+                radius: msg.ball.r,
+                color: "white",
+                vx: msg.ball.vx,
+                vy: msg.ball.vy,
+            };
+        }
+        if (msg.type === "game:over") {
+            console.log("GAME OVER:", msg);
+            // update authoritative scores from game:over payload
+            serverScoreL = msg.score.p1;
+            serverScoreR = msg.score.p2;
+            // stop the client
+            gameOver = true;
+            return;
+        }
+    };
+    ws.onclose = () => console.log("WS close");
+    ws.onerror = (err) => console.log("WS error", err);
     const canvas = document.getElementById("pong");
     if (!canvas) {
         console.error("Canvas with id 'pong' not found");
@@ -16,40 +80,10 @@ window.addEventListener("DOMContentLoaded", () => {
     // Canvas dimensions
     const width = canvas.width;
     const height = canvas.height;
-    /*type Paddle =
-    {
-        x:      number;
-        y:      number;
-        width:  number;
-        height: number;
-        color:  string;
-        speed:	number;
-    };
-    
-    type	Ball =
-    {
-        x:		number;
-        y:		number;
-        radius:	number;
-        color:	string;
-        vx:		number;
-        vy:		number;
-    };*/
+    serverP1Y = (height - PADDLE_HEIGHT) / 2;
+    serverP2Y = (height - PADDLE_HEIGHT) / 2;
     let leftScore = 0;
     let rightScore = 0;
-    /*const	MAX_SCORE = 8;*/
-    let gameOver = false;
-    /*// Paddle Constants
-    const	PADDLE_WIDTH = 20;
-    const	PADDLE_HEIGHT = 100;
-    const	PADDLE_MARGIN = 40;
-    const	PADDLE_SPEED = 6;
-    
-    // Ball Constants
-    const	BALL_RADIUS = 10;
-    const	BALL_SPEED = 5;
-    const	BALL_SPEEDUP = 1.06;
-    const	BALL_MAX_SPEED = 14;*/
     // Left Paddle
     const leftPaddle = {
         x: PADDLE_MARGIN,
@@ -76,80 +110,32 @@ window.addEventListener("DOMContentLoaded", () => {
         vx: BALL_SPEED, // start moving to right
         vy: BALL_SPEED * 0.7, // slight diagonal
     };
-    /*// Drawing Helpers
-    const	drawBackground = () =>
-    {
-        // Background color
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, width, height);
-
-        // Center dashed line
-        ctx.strokeStyle = "gray";
-        ctx.setLineDash([10, 10]);
-        ctx.beginPath();
-        ctx.moveTo(width / 2, 0);
-        ctx.lineTo(width / 2, height);
-        ctx.stroke();
-        ctx.setLineDash([]); // reset to solid
-    };
-
-    const	drawPaddle = (p: Paddle) =>
-    {
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, p.width, p.height);
-    };
-    
-    const	drawBall = () =>
-    {
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI *2);
-        ctx.fillStyle = ball.color;
-        ctx.fill();
-        ctx.closePath();
-    };
-
-    const	drawScore = () =>
-    {
-            ctx.font = "32px Arial";
-            ctx.fillStyle = "white";
-            ctx.textAlign = "center";
-
-            ctx.fillText(leftScore.toString(), width / 4, 50);
-            ctx.fillText(rightScore.toString(), (width * 3) / 4, 50);
-    };
-
-    const	drawGameOver = () =>
-    {
-        ctx.fillStyle = "white";
-
-        ctx.font = "48px Arial";
-        ctx.textAlign = "center";
-
-        ctx.fillText("GAME OVER", width / 2, height / 2 - 20);
-        let	winnerText = "";
-        if (leftScore > rightScore)
-            winnerText = "Left Player Wins!";
-        else if (rightScore > leftScore)
-            winnerText = "Right Player Wins!";
-        ctx.font = "32px Arial";
-        ctx.fillText(winnerText, width / 2, height / 2 + 30);
-    };
-
-    const	drawPausedOverlay = (msg: string) =>
-    {
-        ctx.font = "32px Arial";
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.fillText("PAUSED (P to resume)", width / 2, height / 2);
-    }*/
     //Input handling (keyboard)
     let keys = {};
-    let pausedManual = false;
-    let pausedAuto = false;
-    let pauseMessage = "";
     document.addEventListener("keydown", (e) => {
         keys[e.key] = true;
+        // send inputs to server (only after match)
+        if (youAre === "P1") {
+            if (e.key === "w" || e.key === "W")
+                sendInput("up", true);
+            if (e.key === "s" || e.key === "S")
+                sendInput("down", true);
+        }
+        else if (youAre === "P2") {
+            if (e.key === "ArrowUp")
+                sendInput("up", true);
+            if (e.key === "ArrowDown")
+                sendInput("down", true);
+        }
         if ((e.key === "p" || e.key === "P") && !e.repeat) {
+            if (matched) {
+                const newPaused = !pausedAuto;
+                // OPTIMISTIC UI update
+                pausedAuto = newPaused;
+                pauseMessage = newPaused ? "PAUSED" : "";
+                ws.send(JSON.stringify({ type: "game:pause", paused: newPaused }));
+                return;
+            }
             if (pausedAuto) {
                 pausedAuto = false;
                 pauseMessage = "";
@@ -162,11 +148,32 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     document.addEventListener("keyup", (e) => {
         keys[e.key] = false;
+        // send inputs to server (only after match)
+        if (youAre === "P1") {
+            if (e.key === "w" || e.key === "W")
+                sendInput("up", false);
+            if (e.key === "s" || e.key === "S")
+                sendInput("down", false);
+        }
+        else if (youAre === "P2") {
+            if (e.key === "ArrowUp")
+                sendInput("up", false);
+            if (e.key === "ArrowDown")
+                sendInput("down", false);
+        }
     });
     window.addEventListener("blur", () => {
-        pausedAuto = true;
-        pauseMessage = "PAUSED (press P to resume)";
         keys = {};
+        if (matched) {
+            // pause the whole match
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "game:pause", paused: true }));
+            }
+            return;
+        }
+        // single-player fallback
+        pausedAuto = true;
+        pauseMessage = "PAUSED (press p to resume)";
     });
     window.addEventListener("focus", () => {
         keys = {};
@@ -179,38 +186,7 @@ window.addEventListener("DOMContentLoaded", () => {
         pausedAuto = false;
         pauseMessage = "";
     };
-    const isPaused = () => pausedManual || pausedAuto;
-    /*//Small helper to keep values inside a range
-    const	clamp = (value: number, min: number, max: number): number =>
-    {
-        return Math.max(min, Math.min(max, value));
-    };
-
-    const	hitPaddle = (p: Paddle): boolean =>
-    {
-            const	paddleLeft = p.x;
-            const	paddleRight = p.x + p.width;
-            const	paddleTop = p.y;
-            const	paddleBottom = p.y + p.height;
-
-            const	ballLeft = ball.x - ball.radius;
-            const	ballRight = ball.x + ball.radius;
-            const	ballTop = ball.y - ball.radius;
-            const	ballBottom = ball.y + ball.radius;
-
-            const	overlapX = ballRight > paddleLeft && ballLeft < paddleRight;
-            const 	overlapY = ballBottom > paddleTop && ballTop < paddleBottom;
-
-            return overlapX && overlapY;
-    };
-
-    const	resetBall = (direction: 1 | -1) =>
-    {
-        ball.x = width / 2;
-        ball.y = height /2;
-        ball.vx = direction * BALL_SPEED;
-        ball.vy = BALL_SPEED * 0.7;
-    };*/
+    const isPaused = () => (matched ? pausedAuto : (pausedManual || pausedAuto));
     // Update game state (movement)
     const update = () => {
         console.log("Update frame, ball:", ball.x, ball.y, "vx:", ball.vx, "vy:", ball.vy);
@@ -285,6 +261,15 @@ window.addEventListener("DOMContentLoaded", () => {
     //One frame render
     const render = () => {
         drawBackground(ctx, width, height);
+        if (matched && serverBall) {
+            leftPaddle.y = serverP1Y;
+            rightPaddle.y = serverP2Y;
+            drawScore(ctx, serverScoreL, serverScoreR, width);
+            drawPaddle(ctx, leftPaddle);
+            drawPaddle(ctx, rightPaddle);
+            drawBall(ctx, serverBall);
+            return;
+        }
         drawScore(ctx, leftScore, rightScore, width);
         drawPaddle(ctx, leftPaddle);
         drawPaddle(ctx, rightPaddle);
@@ -294,10 +279,15 @@ window.addEventListener("DOMContentLoaded", () => {
     const loop = () => {
         if (gameOver) {
             render();
-            drawGameOver(ctx, width, height, leftScore, rightScore);
+            if (matched) {
+                drawGameOver(ctx, width, height, serverScoreL, serverScoreR);
+            }
+            else {
+                drawGameOver(ctx, width, height, leftScore, rightScore);
+            }
             return;
         }
-        if (!isPaused())
+        if (!isPaused() && !matched)
             update();
         render();
         if (isPaused())

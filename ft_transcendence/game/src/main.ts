@@ -10,9 +10,89 @@ import {
 	drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay
 } from "./render.js";
 
+
+
 // Run this after the HTML is loaded
-window.addEventListener("DOMContentLoaded", () =>
-{
+window.addEventListener("DOMContentLoaded", () => {
+	let matched = false;
+	let gameOver = false;
+	let pausedManual = false;
+	let pausedAuto = false;
+	let pauseMessage = "";
+	let youAre: "P1" | "P2" | null = null;
+	
+	// authoritative state from server
+	let serverBall: Ball | null = null;
+	let serverP1Y = 0;
+	let serverP2Y = 0;
+	let serverScoreL = 0;
+	let serverScoreR = 0;
+	
+	const WS_URL = "ws://10.0.2.15:3000/ws/game"; // OR localhost if browser runs inside VM
+	const ws = new WebSocket(WS_URL);
+	
+	function sendInput(dir: "up" | "down", pressed: boolean) {
+	  if (!matched)
+	    return;
+	  if (!youAre)
+	    return;
+	  if (ws.readyState !== WebSocket.OPEN)
+	    return;
+	  ws.send(JSON.stringify({ type: "game:input", dir, pressed }));
+	}
+	
+	ws.onopen = () => {
+  	  console.log("WS open");
+  	  ws.send(JSON.stringify({ type: "queue:join" }));
+	};
+
+	ws.onmessage = (e) => {
+  	  const msg = JSON.parse(e.data);
+  	  
+  	  if (msg.type === "match:found") {
+  	    matched = true;
+  	    youAre = msg.youAre;
+  	    console.log("Matched:", msg);
+  	    return;
+	  };
+	  
+	  if (msg.type === "game:state") {
+	    pausedAuto = msg.paused;
+	    pauseMessage = msg.paused ? "PAUSED" : "";
+	  
+	    serverP1Y = msg.p1.y;
+	    serverP2Y = msg.p2.y;
+	    
+	    serverScoreL = msg.score.p1;
+	    serverScoreR = msg.score.p2;
+	    
+	    serverBall = {
+	      x: msg.ball.x,
+	      y: msg.ball.y,
+	      radius: msg.ball.r,
+	      color: "white",
+	      vx: msg.ball.vx,
+	      vy: msg.ball.vy,
+	    };
+	  }
+	  
+	  if (msg.type === "game:over") {
+	    console.log("GAME OVER:", msg);
+	    
+	    // update authoritative scores from game:over payload
+	    serverScoreL = msg.score.p1;
+	    serverScoreR = msg.score.p2;
+	    
+	    // stop the client
+	    gameOver = true;
+	    
+	    return;
+	  }
+	};
+
+	ws.onclose = () => console.log("WS close");
+	ws.onerror = (err) => console.log("WS error", err);
+	
 	const	canvas = document.getElementById("pong") as HTMLCanvasElement | null;
 	if (!canvas)
 	{
@@ -30,11 +110,13 @@ window.addEventListener("DOMContentLoaded", () =>
 	// Canvas dimensions
 	const   width = canvas.width;
 	const   height = canvas.height;
-
+	
+	serverP1Y = (height - PADDLE_HEIGHT) / 2;
+	serverP2Y = (height - PADDLE_HEIGHT) / 2;
+	
 	let	leftScore = 0;
 	let	rightScore = 0;
-	let	gameOver = false;
-
+	
 	// Left Paddle
 	const	leftPaddle: Paddle = {
 		x:		PADDLE_MARGIN,
@@ -66,15 +148,34 @@ window.addEventListener("DOMContentLoaded", () =>
 
 	//Input handling (keyboard)
 	let keys:       Record<string, boolean> = {};
-	
-	let	pausedManual = false;
-	let	pausedAuto = false;
-	let	pauseMessage = "";
 
 	document.addEventListener("keydown", (e) => {
 		keys[e.key] = true;
+		// send inputs to server (only after match)
+		if (youAre === "P1") {
+		  if (e.key === "w" || e.key === "W")
+		    sendInput("up", true);
+		  if (e.key === "s" || e.key === "S")
+		    sendInput("down", true);
+		}
+		else if (youAre === "P2") {
+		  if (e.key === "ArrowUp")
+		    sendInput("up", true);
+		  if (e.key === "ArrowDown")
+		    sendInput("down", true);
+		}
 		if ((e.key === "p" || e.key === "P") && !e.repeat)
 		{
+			if (matched) {
+			  const newPaused = !pausedAuto;
+			  
+			  // OPTIMISTIC UI update
+			  pausedAuto = newPaused;
+			  pauseMessage = newPaused ? "PAUSED" : "";
+			  
+			  ws.send(JSON.stringify({ type: "game:pause", paused: newPaused }))
+			  return;
+			}
 			if (pausedAuto)
 			{
 				pausedAuto = false;
@@ -90,12 +191,34 @@ window.addEventListener("DOMContentLoaded", () =>
 
 	document.addEventListener("keyup", (e) => {
 		keys[e.key] = false;
+		// send inputs to server (only after match)
+		if (youAre === "P1") {
+		  if (e.key === "w" || e.key === "W")
+		    sendInput("up", false);
+		  if (e.key === "s" || e.key === "S")
+		    sendInput("down", false);
+		}
+		else if (youAre === "P2") {
+		  if (e.key === "ArrowUp")
+		    sendInput("up", false);
+		  if (e.key === "ArrowDown")
+		    sendInput("down", false);
+		}
 	});
 
 	window.addEventListener("blur", () => {
-		pausedAuto = true;
-		pauseMessage = "PAUSED (press P to resume)";
 		keys = {};
+		if (matched) {
+		  // pause the whole match
+		  if (ws.readyState === WebSocket.OPEN) {
+		    ws.send(JSON.stringify({ type: "game:pause", paused: true }));
+		  }
+		  return;
+		}
+		
+		// single-player fallback
+		pausedAuto = true;
+		pauseMessage = "PAUSED (press p to resume)";
 	});
 
 	window.addEventListener("focus", () => {
@@ -114,7 +237,7 @@ window.addEventListener("DOMContentLoaded", () =>
 		pauseMessage = "";
 	};
 
-	const	isPaused = () => pausedManual || pausedAuto;
+	const	isPaused = () => (matched ? pausedAuto : (pausedManual || pausedAuto));
 
 	// Update game state (movement)
 	const	update = () => {
@@ -230,6 +353,18 @@ window.addEventListener("DOMContentLoaded", () =>
 	const	render = () =>
 	{
 		drawBackground(ctx, width, height);
+		
+		if (matched && serverBall) {
+		  leftPaddle.y = serverP1Y;
+		  rightPaddle.y = serverP2Y;
+		
+		  drawScore(ctx, serverScoreL, serverScoreR, width);
+		  drawPaddle(ctx, leftPaddle);
+		  drawPaddle(ctx, rightPaddle);
+		  drawBall(ctx, serverBall);
+		  return;
+		}
+		
 		drawScore(ctx, leftScore, rightScore, width);
 		drawPaddle(ctx, leftPaddle);
 		drawPaddle(ctx, rightPaddle);
@@ -242,11 +377,16 @@ window.addEventListener("DOMContentLoaded", () =>
 		if (gameOver)
 		{
 			render();
-			drawGameOver(ctx, width, height, leftScore, rightScore);
+			if (matched) {
+			  drawGameOver(ctx, width, height, serverScoreL, serverScoreR);
+			}
+			else {
+			  drawGameOver(ctx, width, height, leftScore, rightScore);
+			}
 			return;
 		}
 
-		if (!isPaused())
+		if (!isPaused() && !matched)
 			update();
 		
 		render();
