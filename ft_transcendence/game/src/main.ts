@@ -58,7 +58,18 @@ window.addEventListener("DOMContentLoaded", () => {
 	  
 	  if (msg.type === "game:state") {
 	    pausedAuto = msg.paused;
-	    pauseMessage = msg.paused ? "PAUSED" : "";
+	    if (typeof msg.pauseMessage === "string") {
+	      // server explicitly told us the message
+	      pauseMessage = msg.pauseMessage;
+	    }
+	    else if (!msg.paused) {
+	      // unpaused -> clear message
+	      pauseMessage = "";
+	    }
+	    else if (!pauseMessage) {
+	      // paused but server didn't send message -> default only if we have nothing
+	      pauseMessage = "PAUSED";
+	    }
 	  
 	    serverP1Y = msg.p1.y;
 	    serverP2Y = msg.p2.y;

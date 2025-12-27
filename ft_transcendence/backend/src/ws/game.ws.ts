@@ -23,6 +23,8 @@ const BALL_SPEED = 5;
 const BALL_SPEEDUP = 1.06;
 const BALL_MAX_SPEED = 14;
 
+const SERVE_DELAY_MS = 1200;
+
 // types //
 
 type ClientMsg =
@@ -42,6 +44,7 @@ type ServerMsg =
       type: "game:state";
       tick: number;
       paused: boolean;
+      pauseMessage?: string;
       ball: { x: number; y: number; vx: number; vy: number; r: number };
       p1: { y: number };
       p2: { y: number };
@@ -70,6 +73,9 @@ type Room = {
   scoreP2: number;
   
   paused: boolean;
+  
+  pauseMessage: string;
+  serveTimeout?: NodeJS.Timeout;
   
   interval?: NodeJS.Timeout;
 };
@@ -133,6 +139,39 @@ function resetBall(room: Room, direction: 1 | - 1) {
   room.ball.vy = Math.sin(angle) * BALL_SPEED;
 }
 
+function serveBallWithDelay(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
+  // cancel previous serve timer if any
+  if (room.serveTimeout)
+    clearTimeout(room.serveTimeout);
+  
+  // pause & message
+  room.paused = true;
+  room.pauseMessage = direction === 1 ? "RIGHT SERVES" : "LEFT SERVES";
+  
+  // reset position immediately
+  room.ball.x = WIDTH / 2;
+  room.ball.y = HEIGHT / 2;
+  
+  // freeze ball during pause
+  room.ball.vx = 0;
+  room.ball.vy = 0;
+  
+  broadcastState(room);
+  
+  room.serveTimeout = setTimeout(() => {
+    // now acually serve (random angle)
+    const maxAngle = Math.PI / 6;
+    const angle = (Math.random() * 2 - 1) * maxAngle;
+    
+    room.ball.vx = Math.cos(angle) * BALL_SPEED * direction;
+    room.ball.vy = Math.sin(angle) * BALL_SPEED;
+    
+    room.paused = false;
+    room.pauseMessage = "";
+    broadcastState(room);
+  }, delayMs);
+}
+
 function removeFromQueue(ws: WebSocket) {
   waiting.delete(ws);
 }
@@ -150,12 +189,13 @@ function cleanupMatch(matchId : string) {
   socketToMatch.delete(room.p2);
 }
 
-function broadcastState(room :room) {
+function broadcastState(room :Room) {
   const payload: ServerMsg = {
     type: "game:state",
     tick: room.tick,
     paused: room.paused,
-    ball: { x: room.ball.x, y: room.ball.y, vx: room.ball.vx, vy: room.ball.xy, r: BALL_RADIUS },
+    pauseMessage: room.pauseMessage || undefined,
+    ball: { x: room.ball.x, y: room.ball.y, vx: room.ball.vx, vy: room.ball.vy, r: BALL_RADIUS },
     p1: { y: room.p1Y },
     p2: { y: room.p2Y },
     score: { p1: room.scoreP1, p2: room.scoreP2 },
@@ -226,6 +266,7 @@ export async function gameWs(app: FastifyInstance) {
             ball: { x: WIDTH / 2, y: HEIGHT / 2, vx: BALL_SPEED, vy: BALL_SPEED * 0.7 },
             
             paused: false,
+            pauseMessage: "",
             
             scoreP1: 0,
             scoreP2: 0,
@@ -313,7 +354,7 @@ export async function gameWs(app: FastifyInstance) {
                   cleanupMatch(matchId);
                   return;
                 }
-                resetBall(room, 1); // serve toward P2
+                serveBallWithDelay(room, 1); // serve toward P2
               }
           
               if (room.ball.x - BALL_RADIUS > WIDTH) {
@@ -325,7 +366,7 @@ export async function gameWs(app: FastifyInstance) {
                   cleanupMatch(matchId);
                   return;
                 }
-                resetBall(room, -1); // serve toward P1
+                serveBallWithDelay(room, -1); // serve toward P1
               }
             }
             
@@ -387,6 +428,7 @@ export async function gameWs(app: FastifyInstance) {
             return;
           
           room.paused = msg.paused;
+          room.pauseMessage = room.paused ? "PAUSED" : "";
           
           if (room.paused) {
             room.p1Up = room.p1Down = false;
