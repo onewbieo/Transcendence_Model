@@ -5,9 +5,15 @@ import { drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPaus
 window.addEventListener("DOMContentLoaded", () => {
     let matched = false;
     let gameOver = false;
+    // single player state //
     let pausedManual = false;
     let pausedAuto = false;
     let pauseMessage = "";
+    let serving = false;
+    let serveText = "";
+    // server UI state
+    let serverPaused = false;
+    let serverPauseMessage = "";
     let youAre = null;
     // authoritative state from server
     let serverBall = null;
@@ -40,18 +46,18 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         ;
         if (msg.type === "game:state") {
-            pausedAuto = msg.paused;
+            serverPaused = !!msg.paused;
             if (typeof msg.pauseMessage === "string") {
                 // server explicitly told us the message
-                pauseMessage = msg.pauseMessage;
+                serverPauseMessage = msg.pauseMessage;
             }
-            else if (!msg.paused) {
+            else if (!serverPaused) {
                 // unpaused -> clear message
-                pauseMessage = "";
+                serverPauseMessage = "";
             }
-            else if (!pauseMessage) {
+            else if (!serverPauseMessage) {
                 // paused but server didn't send message -> default only if we have nothing
-                pauseMessage = "PAUSED";
+                serverPauseMessage = "PAUSED";
             }
             serverP1Y = msg.p1.y;
             serverP2Y = msg.p2.y;
@@ -140,16 +146,16 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         if ((e.key === "p" || e.key === "P") && !e.repeat) {
             if (matched) {
-                const newPaused = !pausedAuto;
-                // OPTIMISTIC UI update
-                pausedAuto = newPaused;
-                pauseMessage = newPaused ? "PAUSED" : "";
+                const newPaused = !serverPaused;
+                serverPaused = newPaused;
                 ws.send(JSON.stringify({ type: "game:pause", paused: newPaused }));
                 return;
             }
             if (pausedAuto) {
                 pausedAuto = false;
-                pauseMessage = "";
+                if (!serving && !pausedManual)
+                    pauseMessage = "";
+                return;
             }
             else {
                 pausedManual = !pausedManual;
@@ -184,20 +190,26 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         // single-player fallback
         pausedAuto = true;
-        pauseMessage = "PAUSED (press p to resume)";
+        pauseMessage = "PAUSED (press P to resume)";
     });
     window.addEventListener("focus", () => {
         keys = {};
+        // matched game: server own pause state
+        if (matched)
+            return;
+        if (!matched && pausedAuto && !pausedManual) {
+            pauseMessage = "PAUSED (press P to resume)";
+        }
     });
     const onPause = (msg) => {
-        pausedAuto = true;
-        pauseMessage = msg;
+        serving = true;
+        serveText = msg;
     };
     const onResume = () => {
-        pausedAuto = false;
-        pauseMessage = "";
+        serving = false;
+        serveText = "";
     };
-    const isPaused = () => (matched ? pausedAuto : (pausedManual || pausedAuto));
+    const isPaused = () => (matched ? serverPaused : (pausedManual || pausedAuto || serving));
     // Update game state (movement)
     const update = () => {
         console.log("Update frame, ball:", ball.x, ball.y, "vx:", ball.vx, "vy:", ball.vy);
@@ -253,18 +265,19 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         // out of bounds scenario	
         if (ball.x + ball.radius < 0 || ball.x - ball.radius > width) {
+            const isPauseForTimer = () => (matched ? serverPaused : (pausedManual || pausedAuto));
             if (ball.x + ball.radius < 0) {
                 rightScore++;
                 if (rightScore >= MAX_SCORE)
                     gameOver = true;
-                serveBallWithDelay(ball, width, height, 1, onPause, onResume);
+                serveBallWithDelay(ball, width, height, 1, onPause, onResume, isPauseForTimer);
                 return;
             }
             if (ball.x - ball.radius > width) {
                 leftScore++;
                 if (leftScore >= MAX_SCORE)
                     gameOver = true;
-                serveBallWithDelay(ball, width, height, -1, onPause, onResume);
+                serveBallWithDelay(ball, width, height, -1, onPause, onResume, isPauseForTimer);
                 return;
             }
         }
@@ -301,8 +314,17 @@ window.addEventListener("DOMContentLoaded", () => {
         if (!isPaused() && !matched)
             update();
         render();
+        const overlayText = () => {
+            if (matched)
+                return serverPaused ? (serverPauseMessage || "PAUSED") : "";
+            if (pausedManual || pausedAuto)
+                return pauseMessage || "PAUSED (press P to resume)";
+            if (serving)
+                return serveText || "SERVING";
+            return "";
+        };
         if (isPaused())
-            drawPausedOverlay(ctx, pauseMessage || "PAUSED", width, height);
+            drawPausedOverlay(ctx, overlayText(), width, height);
         requestAnimationFrame(loop);
     };
     console.log("Paddles drawn:", { leftPaddle, rightPaddle });

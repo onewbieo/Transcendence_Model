@@ -24,10 +24,37 @@ export const resetBall = (ball, width, height, direction) => {
     ball.vx = Math.cos(angle) * BALL_SPEED * direction;
     ball.vy = Math.sin(angle) * BALL_SPEED;
 };
-export const serveBallWithDelay = (ball, width, height, direction, onPause, onResume, delayMs = SERVE_DELAY_MS) => {
+let serveTimer = null;
+export const serveBallWithDelay = (ball, width, height, direction, onPause, onResume, isPaused, delayMs = SERVE_DELAY_MS) => {
     onPause(direction === 1 ? "RIGHT SERVES" : "LEFT SERVES");
-    resetBall(ball, width, height, direction);
-    setTimeout(() => {
-        onResume();
-    }, delayMs);
+    // freeze ball + center it during the countdown
+    ball.x = width / 2;
+    ball.y = height / 2;
+    ball.vx = 0;
+    ball.vy = 0;
+    if (serveTimer) {
+        clearTimeout(serveTimer);
+        serveTimer = null;
+    }
+    let remaining = delayMs;
+    let last = performance.now();
+    const step = () => {
+        const now = performance.now();
+        // if paused, dont consume remaining time
+        if (isPaused && isPaused()) {
+            last = now;
+            serveTimer = setTimeout(step, 16);
+            return;
+        }
+        remaining -= now - last;
+        last = now;
+        if (remaining <= 0) {
+            resetBall(ball, width, height, direction);
+            onResume();
+            serveTimer = null;
+            return;
+        }
+        serveTimer = setTimeout(step, 16);
+    };
+    serveTimer = setTimeout(step, 16);
 };

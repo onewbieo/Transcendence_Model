@@ -53,8 +53,8 @@ type ServerMsg =
   | { type: "game:over"; winner: Role; score: { p1: number; p2: number } };
 
 type Room = {
-  p1: WebSocket;
-  p2: WebSocket;
+  p1: WebSocket | null;
+  p2: WebSocket | null;
   tick: number;
   
   // inputs (authoritative)
@@ -77,6 +77,14 @@ type Room = {
   pauseMessage: string;
   serveTimeout?: NodeJS.Timeout;
   
+  // grace timers
+  p1DisconnectTimer?: NodeJS.Timeout;
+  p2DisconnectTimer?: NodeJS.Timeout;
+  
+  // grace countdown
+  disconnectDeadlineMs?: number;
+  disconnectCountdownInterval?: NodeJS.Timeout;
+  
   interval?: NodeJS.Timeout;
 };
 
@@ -95,7 +103,9 @@ function safeJson(raw: any): any | null {
   }
 }
 
-function send(ws: WebSocket, msg: ServerMsg) {
+function send(ws: WebSocket | null, msg: ServerMsg) {
+  if (!ws)
+    return;
   if (ws.readyState !== WebSocket.OPEN)
     return;
   ws.send(JSON.stringify(msg));
@@ -183,10 +193,20 @@ function cleanupMatch(matchId : string) {
   
   if (room.interval)
     clearInterval(room.interval);
+  if (room.serveTimeout)
+    clearTimeout(room.serveTimeout);
+  if (room.p1DisconnectTimer)
+    clearTimeout(room.p1DisconnectTimer);
+  if (room.p2DisconnectTimer)
+    clearTimeout(room.p2DisconnectTimer);
+  if (room.disconnectCountdownInterval)
+    clearInterval(room.disconnectCountdownInterval);
   
   rooms.delete(matchId);
-  socketToMatch.delete(room.p1);
-  socketToMatch.delete(room.p2);
+  if (room.p1)
+    socketToMatch.delete(room.p1);
+  if (room.p2)
+    socketToMatch.delete(room.p2);
 }
 
 function broadcastState(room :Room) {
@@ -369,19 +389,7 @@ export async function gameWs(app: FastifyInstance) {
                 serveBallWithDelay(room, -1); // serve toward P1
               }
             }
-            
-            const payload: ServerMsg = {
-              type: "game:state",
-              tick: room.tick,
-              paused: room.paused,
-              ball: { x: room.ball.x, y: room.ball.y, vx: room.ball.vx, vy: room.ball.vy, r: BALL_RADIUS },
-              p1: { y: room.p1Y },
-              p2: { y: room.p2Y },
-              score: { p1: room.scoreP1, p2: room.scoreP2 },
-            };
-
-            send(room.p1, payload);
-            send(room.p2, payload);
+            broadcastState(room);
           }, 16);
 
           return;
@@ -449,15 +457,101 @@ export async function gameWs(app: FastifyInstance) {
         removeFromQueue(socket);
 
         const info = socketToMatch.get(socket);
-        if (info) {
-          const room = rooms.get(info.matchId);
-          if (room) {
-            const other = socket === room.p1 ? room.p2 : room.p1;
-            send(other, { type: "game:over", winner: info.role === "P1" ? "P2" : "P1", score: { p1: room.scoreP1, p2: room.scoreP2 } });
-          }
-          cleanupMatch(info.matchId);
+        if (!info) {
+          req.log.info({ code, reason: reason?.toString() }, "ws disconnected");
+          return;
         }
-
+        
+        const room = rooms.get(info.matchId);
+        if (!room) {
+          socketToMatch.delete(socket);
+          req.log.info({ code, reason: reason?.toString() }, "ws disconnected");
+          return;
+        }
+        
+        // mark disconnected + pause the game
+        if (info.role === "P1")
+          room.p1 = null;
+        else
+          room.p2 = null;
+        
+        if (room.serveTimeout) {
+          clearTimeout(room.serveTimeout);
+          room.serveTimeout = undefined;
+        }
+        room.ball.vx = 0;
+        room.ball.vy = 0;
+        
+        // clear old timeout for this role (if any)
+        if (info.role === "P1" && room.p1DisconnectTimer) {
+          clearTimeout(room.p1DisconnectTimer);
+          room.p1DisconnectTimer = undefined;
+        }
+        if (info.role === "P2" && room.p2DisconnectTimer) {
+          clearTimeout(room.p2DisconnectTimer);
+          room.p2DisconnectTimer = undefined;
+        }
+        if (room.disconnectCountdownInterval) {
+          clearInterval(room.disconnectCountdownInterval);
+          room.disconnectCountdownInterval = undefined;
+        }
+        
+        const winner: Role =
+          room.p1 === null && room.p2 !== null ? "P2" :
+          room.p2 === null && room.p1 !== null ? "P1" :
+          // fallback
+          (info.role === "P1" ? "P2" : "P1");
+        
+        // set deadline 10s from now
+        room.disconnectDeadlineMs = Date.now() + 10_000;
+        
+        // pause + push first message
+        room.paused = true;
+        room.pauseMessage = "WAITING 10s FOR RECONNECT";
+        broadcastState(room);
+            
+        // update message every 1s
+        room.disconnectCountdownInterval = setInterval(() => {
+          const msLeft = (room.disconnectDeadlineMs ?? 0) - Date.now();
+          const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
+          
+          room.pauseMessage = `WAITING ${secLeft}s FOR RECONNECT`;
+          broadcastState(room);
+            
+          if (secLeft <= 0 && room.disconnectCountdownInterval) {
+                  clearInterval(room.disconnectCountdownInterval);
+                  room.disconnectCountdownInterval = undefined;
+          }
+        }, 1000);
+            
+        const timer = setTimeout(() => {
+          // if player still missing after grace period -> end game
+          const stillMissing =
+            winner === "P1" ? room.p2 === null : room.p1 === null;
+              
+          if (room.disconnectCountdownInterval) {
+            clearInterval(room.disconnectCountdownInterval);
+            room.disconnectCountdownInterval = undefined;
+          }
+              
+          if (stillMissing) {
+            send(room.p1, { type: "game:over", winner, score: { p1: room.scoreP1, p2: room.scoreP2 } });
+            send(room.p2, { type: "game:over", winner, score: { p1: room.scoreP1, p2: room.scoreP2 } });
+            cleanupMatch(info.matchId);
+          }
+          else {
+            room.pauseMessage = "";
+            room.paused = false;
+            broadcastState(room);
+          }
+        }, 10_000);
+            
+        if (info.role === "P1")
+          room.p1DisconnectTimer = timer;
+        else
+          room.p2DisconnectTimer = timer;
+          
+        socketToMatch.delete(socket);
         req.log.info({ code, reason: reason?.toString() }, "ws disconnected");
       });
   });
