@@ -12,6 +12,7 @@ window.addEventListener("DOMContentLoaded", () => {
     let serving = false;
     let serveText = "";
     // server UI state
+    let serverUserPaused = false;
     let serverPaused = false;
     let serverPauseMessage = "";
     let youAre = null;
@@ -79,6 +80,9 @@ window.addEventListener("DOMContentLoaded", () => {
             serverScoreR = msg.score.p2;
             // stop the client
             gameOver = true;
+            if (!serverPaused) {
+                serverUserPaused = false;
+            }
             return;
         }
     };
@@ -146,9 +150,8 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         if ((e.key === "p" || e.key === "P") && !e.repeat) {
             if (matched) {
-                const newPaused = !serverPaused;
-                serverPaused = newPaused;
-                ws.send(JSON.stringify({ type: "game:pause", paused: newPaused }));
+                serverUserPaused = !serverUserPaused;
+                ws.send(JSON.stringify({ type: "game:pause", paused: serverUserPaused }));
                 return;
             }
             if (pausedAuto) {
@@ -184,6 +187,7 @@ window.addEventListener("DOMContentLoaded", () => {
         if (matched) {
             // pause the whole match
             if (ws.readyState === WebSocket.OPEN) {
+                serverUserPaused = true;
                 ws.send(JSON.stringify({ type: "game:pause", paused: true }));
             }
             return;

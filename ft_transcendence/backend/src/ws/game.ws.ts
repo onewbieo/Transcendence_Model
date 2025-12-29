@@ -76,6 +76,11 @@ type Room = {
   
   pauseMessage: string;
   serveTimeout?: NodeJS.Timeout;
+  serveStartAtMs?: number;
+  serveDelayMs?: number;
+  serveDir?: 1 | -1;
+  serveInProgress?: boolean;
+  pendingServeRemainingMs?: number;
   
   // grace timers
   p1DisconnectTimer?: NodeJS.Timeout;
@@ -182,6 +187,52 @@ function serveBallWithDelay(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY
   }, delayMs);
 }
 
+function beginServe(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
+  if (room.serveTimeout)
+    clearTimeout(room.serveTimeout);
+  
+  room.serveInProgress = true;
+  room.serveDir = direction;
+  room.serveStartAtMs = Date.now();
+  room.serveDelayMs = delayMs;
+  room.pendingServeRemainingMs = undefined;
+  
+  room.paused = true;
+  room.pauseMessage = direction === 1 ? "RIGHT SERVES" : "LEFT SERVES";
+  
+  // freeze ball at center 
+  room.ball.x = WIDTH / 2;
+  room.ball.y = HEIGHT / 2;
+  room.ball.vx = 0;
+  room.ball.vy = 0;
+  
+  broadcastState(room);
+  
+  room.serveTimeout = setTimeout(() => {
+    room.serveTimeout = undefined;
+    
+    // serve countdown finished
+    room.serveInProgress = false;
+    
+    // only block serving if user manually paused 
+    if (room.pauseMessage === "PAUSED") {
+      room.pendingServeRemainingMs = 0;
+      broadcastState(room);
+      return;
+    }
+    
+    const maxAngle = Math.PI / 6;
+    const angle = (Math.random() * 2 - 1) * maxAngle;
+    room.ball.vx = Math.cos(angle) * BALL_SPEED * direction;
+    room.ball.vy = Math.sin(angle) * BALL_SPEED;
+    
+    room.paused = false;
+    room.pauseMessage = "";
+    
+    broadcastState(room);
+  }, delayMs);
+}
+
 function removeFromQueue(ws: WebSocket) {
   waiting.delete(ws);
 }
@@ -223,6 +274,22 @@ function broadcastState(room :Room) {
   
   send(room.p1, payload);
   send(room.p2, payload);
+}
+
+function freezeServeIfRunning(room: Room) {
+  if (!room.serveInProgress || !room.serveStartAtMs || !room.serveDelayMs)
+    return;
+  
+  const elapsed = Date.now() - room.serveStartAtMs;
+  const remaining = Math.max(0, room.serveDelayMs - elapsed);
+  
+  room.pendingServeRemainingMs = remaining;
+  
+  if (room.serveTimeout) {
+    clearTimeout(room.serveTimeout);
+    room.serveTimeout = undefined;
+  }
+  room.serveInProgress = false;
 }
 
 // main //
@@ -374,7 +441,7 @@ export async function gameWs(app: FastifyInstance) {
                   cleanupMatch(matchId);
                   return;
                 }
-                serveBallWithDelay(room, 1); // serve toward P2
+                beginServe(room, 1); // serve toward P2
               }
           
               if (room.ball.x - BALL_RADIUS > WIDTH) {
@@ -386,7 +453,7 @@ export async function gameWs(app: FastifyInstance) {
                   cleanupMatch(matchId);
                   return;
                 }
-                serveBallWithDelay(room, -1); // serve toward P1
+                beginServe(room, -1); // serve toward P1
               }
             }
             broadcastState(room);
@@ -436,15 +503,24 @@ export async function gameWs(app: FastifyInstance) {
             return;
           
           room.paused = msg.paused;
-          room.pauseMessage = room.paused ? "PAUSED" : "";
           
           if (room.paused) {
-            room.p1Up = room.p1Down = false;
-            room.p2Up = room.p2Down = false;
+            room.pauseMessage = "PAUSED";
+            freezeServeIfRunning(room);
+          }
+          else {
+            // resuming: if we had a pending serve, restart countdown with remaining ms
+            room.pauseMessage = "";
+            if (typeof room.pendingServeRemainingMs === "number") {
+              const ms = room.pendingServeRemainingMs;
+              room.pendingServeRemainingMs = undefined;
+              const dir = room.serveDir ?? 1;
+              beginServe(room, dir, ms);
+              return;
+            }
           }
           
           broadcastState(room);
-          
           return;
         }
 
