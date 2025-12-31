@@ -21,19 +21,37 @@ async function main() {
   
   app.decorate("authenticate", async (req: any, reply: any) => {
     try {
+      // Support WS: /ws/game?token=JWT
+      const q = (req.query ?? {}) as Record<string, any>;
+      const tokenFromQuery = typeof q.token === "string" ? q.token : undefined;
+      
+      if (tokenFromQuery) {
+        req.user = app.jwt.verify(tokenFromQuery);
+        return;
+      }
       await req.jwtVerify();
     }
-    catch {
+    catch (err) {
+      req.log?.error?.(err, "authenticate failed");
       return reply.code(401).send({ error: "unauthorized" });
     }
   });
   
   app.decorate("authorizeAdmin", async (req: any, reply: any) => {
     try {
-      await req.jwtVerify();
-      if (req.user.role !== "ADMIN") {
+      const q = (req.query ?? {}) as Record<string, any>;
+      const tokenFromQuery = typeof q.token === "string" ? q.token : undefined;
+      
+      if (tokenFromQuery) 
+        await req.jwtVerify({ token: tokenFromQuery });
+      else
+        await req.jwtVerify();
+        
+      if ((req.user as any)?.role !== "ADMIN") {
         return reply.code(403).send({ error: "forbidden" });
       }
+      
+      return;
     }
     catch {
       return reply.code(401).send({ error: "unauthorized" });

@@ -10,10 +10,32 @@ import {
 	drawBackground, drawPaddle, drawBall, drawScore, drawGameOver, drawPausedOverlay
 } from "./render.js";
 
+const ALLOW_TOKEN_IN_URL = true;
+
+function getToken(): string | null {
+  return sessionStorage.getItem("token") ?? localStorage.getItem("token"); // wherever you store JWT from /auth/login
+}
+
+function makeWsUrl(): string {
+  const token = getToken();
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  const host = window.location.hostname; // e.g. localhost
+  const wsHost = `${proto}://${host}:3000/ws/game`;
+  return token ? `${wsHost}?token=${encodeURIComponent(token)}` : wsHost;
+}
+
 // Run this after the HTML is loaded
 window.addEventListener("DOMContentLoaded", () => {
-	let matched = false;
+	if (ALLOW_TOKEN_IN_URL) {
+	  const tokenFromUrl = new URLSearchParams(location.search).get("token");
+	  if (tokenFromUrl) {
+  	    sessionStorage.setItem("token", tokenFromUrl);
+ 	  }
+ 	}
+	
+        let matched = false;
 	let gameOver = false;
+	let youAre: "P1" | "P2" | null = null;
 	
 	// single player state //
 	let pausedManual = false;
@@ -28,8 +50,6 @@ window.addEventListener("DOMContentLoaded", () => {
 	let serverPaused = false;
 	let serverPauseMessage = "";
 	
-	let youAre: "P1" | "P2" | null = null;
-	
 	// authoritative state from server
 	let serverBall: Ball | null = null;
 	let serverP1Y = 0;
@@ -37,8 +57,23 @@ window.addEventListener("DOMContentLoaded", () => {
 	let serverScoreL = 0;
 	let serverScoreR = 0;
 	
-	const WS_URL = "ws://10.0.2.15:3000/ws/game"; // OR localhost if browser runs inside VM
-	const ws = new WebSocket(WS_URL);
+	const wsUrl = makeWsUrl();
+	console.log("WS URL:", wsUrl);
+	const ws = new WebSocket(wsUrl);
+	
+	let joinSent = false;
+	let joinTimer: number | undefined;
+	
+	function scheduleJoinFallback(ms: number) {
+	  if (joinTimer)
+	    window.clearTimeout(joinTimer);
+	  joinTimer = window.setTimeout(() => {
+	    if (!matched && !joinSent && ws.readyState === WebSocket.OPEN) {
+	      joinSent = true;
+	      ws.send(JSON.stringify({ type: "queue:join" }));
+	    }
+	  }, ms);
+	}
 	
 	function sendInput(dir: "up" | "down", pressed: boolean) {
 	  if (!matched)
@@ -51,23 +86,58 @@ window.addEventListener("DOMContentLoaded", () => {
 	}
 	
 	ws.onopen = () => {
-  	  console.log("WS open");
-  	  ws.send(JSON.stringify({ type: "queue:join" }));
+	  console.log("WS open");
+	  
+	  matched = false;
+	  youAre = null;
+	  
+	  joinSent = false;
+	  if (joinTimer)
+	    window.clearTimeout(joinTimer);
+	  
+	  ws.send(JSON.stringify({ type: "match:reconnect" }));
+	  
+	  scheduleJoinFallback(1200);
 	};
 
 	ws.onmessage = (e) => {
   	  const msg = JSON.parse(e.data);
   	  
+  	  if (msg.type === "connected") {
+  	    // Optional: log it, but don't do anything else
+  	    console.log("WS connected (server ack)");
+  	    return;
+  	  }
+  	  
+  	  if (msg.type === "match:reconnect_denied") {
+  	    console.log("Reconnect denied:", msg.reason);
+  	    if (!matched && !joinSent && ws.readyState === WebSocket.OPEN) {
+  	      joinSent = true;
+  	      ws.send(JSON.stringify({ type: "queue:join" }));
+  	    }
+  	    return;
+  	  }
+  	  
   	  if (msg.type === "match:found") {
   	    matched = true;
   	    youAre = msg.youAre;
+  	    
+  	    if (joinTimer)
+  	      window.clearTimeout(joinTimer);
+  	    joinTimer = undefined;
+  	    
   	    console.log("Matched:", msg);
   	    return;
-	  };
+	  }
 	  
 	  if (msg.type === "game:state") {
+	    matched = true;
+	    
 	    serverPaused = !!msg.paused;
 	    
+	    // IMPORTANT:
+	    // Use server message verbatim if provided.
+	    // If paused but no message, keep previous or default "PAUSED".
 	    if (typeof msg.pauseMessage === "string") {
 	      // server explicitly told us the message
 	      serverPauseMessage = msg.pauseMessage;
@@ -80,7 +150,11 @@ window.addEventListener("DOMContentLoaded", () => {
 	      // paused but server didn't send message -> default only if we have nothing
 	      serverPauseMessage = "PAUSED";
 	    }
-	  
+	    
+	    if (!serverPaused) {
+	      serverUserPaused = false;
+	    }
+	    
 	    serverP1Y = msg.p1.y;
 	    serverP2Y = msg.p2.y;
 	    
@@ -95,6 +169,8 @@ window.addEventListener("DOMContentLoaded", () => {
 	      vx: msg.ball.vx,
 	      vy: msg.ball.vy,
 	    };
+	    
+	    return;
 	  }
 	  
 	  if (msg.type === "game:over") {
@@ -110,6 +186,7 @@ window.addEventListener("DOMContentLoaded", () => {
 	    if (!serverPaused) {
 	      serverUserPaused = false;
 	    }
+	    
 	    return;
 	  }
 	};
@@ -190,11 +267,16 @@ window.addEventListener("DOMContentLoaded", () => {
 		}
 		if ((e.key === "p" || e.key === "P") && !e.repeat)
 		{
+			// multi-player
 			if (matched) {
 			  serverUserPaused = !serverUserPaused;
-			  ws.send(JSON.stringify({ type: "game:pause", paused: serverUserPaused }))
+			  if (ws.readyState === WebSocket.OPEN) {
+			    ws.send(JSON.stringify({ type: "game:pause", paused: serverUserPaused }));
+			  }
 			  return;
 			}
+			
+			// single player
 			if (pausedAuto)
 			{
 				pausedAuto = false;
@@ -271,7 +353,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
 	// Update game state (movement)
 	const	update = () => {
-		console.log("Update frame, ball:", ball.x, ball.y,"vx:", ball.vx,  "vy:", ball.vy);
 		// Left Paddle: W (up), S (down)
 		if (keys["w"] || keys["W"])
 		{
@@ -401,6 +482,22 @@ window.addEventListener("DOMContentLoaded", () => {
 		drawPaddle(ctx, rightPaddle);
 		drawBall(ctx, ball);
 	};
+	
+	const overlayText = () => {
+	  if (matched) {
+	    if (!serverPaused)
+	      return "";
+	    return serverPauseMessage || "PAUSED";
+	  }
+		    
+	  if (pausedManual || pausedAuto)
+	    return pauseMessage || "PAUSED (press P to resume)";
+	     
+	  if (serving)
+	    return serveText || "SERVING";
+		    
+	  return "";
+	};
 
 	// Main loop
 	const loop = () =>
@@ -421,19 +518,6 @@ window.addEventListener("DOMContentLoaded", () => {
 			update();
 		
 		render();
-		
-		const overlayText = () => {
-		  if (matched)
-		    return serverPaused ? (serverPauseMessage || "PAUSED") : "";
-		    
-		  if (pausedManual || pausedAuto)
-		    return pauseMessage || "PAUSED (press P to resume)";
-		      
-		  if (serving)
-		    return serveText || "SERVING";
-		    
-		  return "";
-		}
 		
 		if (isPaused())
 		  drawPausedOverlay(ctx, overlayText(), width, height);

@@ -32,7 +32,8 @@ type ClientMsg =
   | { type: "queue:join" }
   | { type: "queue:leave" }
   | { type: "game:input"; dir: "up" | "down"; pressed: boolean }
-  | { type: "game:pause"; paused: boolean };
+  | { type: "game:pause"; paused: boolean }
+  | { type: "match:reconnect" };
 
 type ServerMsg =
   | { type: "connected" }
@@ -40,6 +41,7 @@ type ServerMsg =
   | { type: "queue:joined" }
   | { type: "queue:left" }
   | { type: "match:found"; matchId: string; youAre: Role }
+  | { type: "match:reconnect_denied"; reason: string }
   | {
       type: "game:state";
       tick: number;
@@ -51,10 +53,15 @@ type ServerMsg =
       score: { p1: number; p2: number };
     }
   | { type: "game:over"; winner: Role; score: { p1: number; p2: number } };
-
+  
 type Room = {
   p1: WebSocket | null;
   p2: WebSocket | null;
+  
+  // bind slots to real users (stable across tab close)
+  p1UserId: number;
+  p2UserId: number;
+  
   tick: number;
   
   // inputs (authoritative)
@@ -73,6 +80,7 @@ type Room = {
   scoreP2: number;
   
   paused: boolean;
+  userPaused?: boolean;
   
   pauseMessage: string;
   serveTimeout?: NodeJS.Timeout;
@@ -90,14 +98,54 @@ type Room = {
   disconnectDeadlineMs?: number;
   disconnectCountdownInterval?: NodeJS.Timeout;
   
+  readyTimeout?: NodeJS.Timeout;
+  
   interval?: NodeJS.Timeout;
 };
 
 const rooms = new Map<string, Room>();
 const socketToMatch = new Map<WebSocket, { matchId: string; role: Role }>();
 const waiting = new Set<WebSocket>();
+const socketToUserId = new Map<WebSocket, number>();
+const wsAlive = new Map<WebSocket, boolean>();
+
+setInterval(() => {
+  for (const [ws, alive] of wsAlive) {
+    if (!ws) {
+      wsAlive.delete(ws as any);
+      continue;
+    }
+    // if not open, forget it
+    if (ws.readyState !== WebSocket.OPEN) {
+      wsAlive.delete(ws);
+      continue;
+    }
+    
+    // if last cycle didnt get pong -> kill it (zombie)
+    if (!alive) {
+      try {
+        ws.terminate();
+      }
+      catch {}
+      forceCloseCleanup(ws, "heartbeat");
+      continue;
+    }
+    
+    // expect pong next round
+    wsAlive.set(ws, false);
+    try {
+      ws.ping();
+    }
+    catch {}
+  }
+}, 5000);
 
 // helpers //
+function purgeDeadWaiting() {
+  for (const ws of waiting) {
+    if (ws.readyState !== WebSocket.OPEN) waiting.delete(ws);
+  }
+}
 
 function safeJson(raw: any): any | null {
   try {
@@ -106,6 +154,47 @@ function safeJson(raw: any): any | null {
   catch {
     return null;
   }
+}
+
+function forceCloseCleanup(ws: WebSocket, why: string) {
+  // remove queue
+  waiting.delete(ws);
+
+  // remove identity maps
+  socketToUserId.delete(ws);
+  
+  wsAlive.delete(ws);
+
+  const info = socketToMatch.get(ws);
+  if (!info) {
+    for (const room of rooms.values()) {
+      if (room.p1 === ws)
+        room.p1 = null;
+      if (room.p2 === ws)
+        room.p2 = null;
+    }
+    return;
+  }
+
+  const room = rooms.get(info.matchId);
+  socketToMatch.delete(ws);
+
+  if (!room)
+    return;
+
+  if (info.role === "P1" && room.p1 === ws)
+    room.p1 = null;
+  if (info.role === "P2" && room.p2 === ws)
+    room.p2 = null;
+
+  // pause + grace countdown will be handled by your normal disconnect logic
+  // but we need to trigger it here if the close event never arrives.
+  // So: simulate the start of grace period.
+  room.paused = true;
+  room.pauseMessage = `WAITING 10s FOR RECONNECT (${why})`;
+  broadcastState(room);
+
+  // if you want: start grace timer here too (optional)
 }
 
 function send(ws: WebSocket | null, msg: ServerMsg) {
@@ -154,39 +243,6 @@ function resetBall(room: Room, direction: 1 | - 1) {
   room.ball.vy = Math.sin(angle) * BALL_SPEED;
 }
 
-function serveBallWithDelay(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
-  // cancel previous serve timer if any
-  if (room.serveTimeout)
-    clearTimeout(room.serveTimeout);
-  
-  // pause & message
-  room.paused = true;
-  room.pauseMessage = direction === 1 ? "RIGHT SERVES" : "LEFT SERVES";
-  
-  // reset position immediately
-  room.ball.x = WIDTH / 2;
-  room.ball.y = HEIGHT / 2;
-  
-  // freeze ball during pause
-  room.ball.vx = 0;
-  room.ball.vy = 0;
-  
-  broadcastState(room);
-  
-  room.serveTimeout = setTimeout(() => {
-    // now acually serve (random angle)
-    const maxAngle = Math.PI / 6;
-    const angle = (Math.random() * 2 - 1) * maxAngle;
-    
-    room.ball.vx = Math.cos(angle) * BALL_SPEED * direction;
-    room.ball.vy = Math.sin(angle) * BALL_SPEED;
-    
-    room.paused = false;
-    room.pauseMessage = "";
-    broadcastState(room);
-  }, delayMs);
-}
-
 function beginServe(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
   if (room.serveTimeout)
     clearTimeout(room.serveTimeout);
@@ -215,7 +271,7 @@ function beginServe(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
     room.serveInProgress = false;
     
     // only block serving if user manually paused 
-    if (room.pauseMessage === "PAUSED") {
+    if (room.userPaused) {
       room.pendingServeRemainingMs = 0;
       broadcastState(room);
       return;
@@ -231,6 +287,15 @@ function beginServe(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
     
     broadcastState(room);
   }, delayMs);
+}
+
+function findRoomByUser(userId: number): { matchId: string; room: Room } | null {
+  for (const [matchId, room] of rooms.entries()) {
+    if (room.p1UserId === userId || room.p2UserId === userId) {
+      return { matchId, room };
+    }
+  }
+  return null;
 }
 
 function removeFromQueue(ws: WebSocket) {
@@ -296,11 +361,35 @@ function freezeServeIfRunning(room: Room) {
 
 export async function gameWs(app: FastifyInstance) {
   app.get(
-    "/ws/game",
-    { websocket: true },
-    (socket, req) => {
+    "/ws/game", 
+    {
+      websocket: true,
+      preHandler: (app as any).authenticate,
+    },
+    (connection, req: any) => {
+      const socket: WebSocket | undefined = connection?.socket ?? connection;
+      
+      if (!socket || typeof (socket as any).on !== "function") {
+        req.log.error({
+          connectionKeys: Object.keys(connection ?? {}) }, "WS socket missing");
+        return;
+      }
+      
+      wsAlive.set(socket, true);
+      
+      socket.on("pong", () => {
+        wsAlive.set(socket, true);
+      });
+      
+      req.log.info( {
+        url: req.url, user: req.user, headers: req.headers
+        }, "WS upgrade OK");
+      
+      const userId = (req.user as any).sub as number;
       socket.on("error", (err) => req.log.error(err, "ws socket error"));
-
+      
+      socketToUserId.set(socket, userId);
+      
       send(socket, { type: "connected" });
 
       socket.on("message", (raw) => {
@@ -314,6 +403,7 @@ export async function gameWs(app: FastifyInstance) {
           return;
 
         case "queue:join": {
+          purgeDeadWaiting();
           if (waiting.has(socket))
             return;
 
@@ -326,12 +416,40 @@ export async function gameWs(app: FastifyInstance) {
           const iter = waiting.values();
           const p1 = iter.next().value as WebSocket;
           const p2 = iter.next().value as WebSocket;
-
+          
+          if (p1.readyState !== WebSocket.OPEN || p2.readyState !== WebSocket.OPEN) {
+  	    waiting.delete(p1);
+            waiting.delete(p2);
+  	    return;
+	  }
+		
           waiting.delete(p1);
           waiting.delete(p2);
 
           const matchId = crypto.randomUUID();
-
+          
+          const p1UserId = socketToUserId.get(p1);
+          const p2UserId = socketToUserId.get(p2);
+          
+          if (!p1UserId || !p2UserId) {
+            // cannot start match if we don't know identities
+            send(p1, { type: "match:reconnect_denied", reason: "auth missing" });
+            send(p2, { type: "match:reconnect_denied", reason: "auth missing" });
+            return;
+          }
+          
+          if (p1UserId === p2UserId) {
+            // Put the first socket back to waiting, kick the second (or vice versa)
+            waiting.add(p1);
+            send(p2, {
+              type: "match:reconnect_denied",
+              reason: "cannot match against yourself (open another account / incognito)",
+            });
+            
+            waiting.delete(p2);
+            return;
+          }
+	
           send(p1, { type: "match:found", matchId, youAre: "P1" });
           send(p2, { type: "match:found", matchId, youAre: "P2" });
 
@@ -340,6 +458,10 @@ export async function gameWs(app: FastifyInstance) {
           const room: Room = {
             p1,
             p2,
+            
+            p1UserId,
+            p2UserId,
+            
             tick: 0,
             
             p1Up: false,
@@ -359,7 +481,7 @@ export async function gameWs(app: FastifyInstance) {
             scoreP2: 0,
           };
           
-          rooms.set(matchId, room);	
+          rooms.set(matchId, room);
           socketToMatch.set(p1, { matchId, role: "P1" });
           socketToMatch.set(p2, { matchId, role: "P2" });
           
@@ -461,6 +583,119 @@ export async function gameWs(app: FastifyInstance) {
 
           return;
         }
+        
+        case "match:reconnect": {
+          const userId = socketToUserId.get(socket);
+          if (!userId)
+            return;
+          
+          const found = findRoomByUser(userId);
+          if (!found) {
+            send(socket, { type: "match:reconnect_denied", reason: "no active match" });
+            return;
+          }
+          
+          const { matchId, room } = found;
+          
+          const youAre: Role = room.p1UserId === userId ? "P1" : "P2";
+          
+          // deny if slot occupied by a live socket (prevents double tabs)
+          const current = youAre === "P1" ? room.p1 : room.p2;
+          const alive = 
+            !!current &&
+            current.readyState === WebSocket.OPEN &&
+            wsAlive.get(current) === true;
+          
+          req.log.info({ matchId, youAre, alive }, "reconnect attempt");
+          
+          // If slot is occupied by another socket, force takeover.
+          // This fixes "reconnect denied forever" caused by zombie OPEN sockets.
+          if (alive && current) {
+            req.log.warn({ matchId, youAre }, "slot occupied - forcing takeover");
+            try {
+              current.terminate();
+            }
+            catch {}
+            wsAlive.delete(current);
+            socketToUserId.delete(current);
+            socketToMatch.delete(current);
+            
+            if (youAre === "P1")
+              room.p1 = null;
+            else
+              room.p2 = null;
+          }
+          
+          // Attach socket to the slot
+          if (youAre === "P1")
+            room.p1 = socket;
+          else
+            room.p2 = socket;
+                   
+          socketToMatch.set(socket, { matchId, role: youAre });
+          send(socket, { type: "match:found", matchId, youAre });
+          room.userPaused = false;
+          
+          // cancel grace timer for this role
+          if (youAre === "P1" && room.p1DisconnectTimer) {
+            clearTimeout(room.p1DisconnectTimer);
+            room.p1DisconnectTimer = undefined;
+          }
+          
+          if (youAre === "P2" && room.p2DisconnectTimer) {
+            clearTimeout(room.p2DisconnectTimer);
+            room.p2DisconnectTimer = undefined;
+          }
+          
+          // if both players are back, pause 
+          if (room.p1 && room.p2) {
+            if (room.disconnectCountdownInterval) {
+              clearInterval(room.disconnectCountdownInterval);
+              room.disconnectCountdownInterval = undefined;
+    	    }
+            room.disconnectDeadlineMs = undefined;
+          }
+          
+          room.paused = true;
+          room.pauseMessage = "READY";
+          broadcastState(room);
+          
+          if (room.readyTimeout)
+            clearTimeout(room.readyTimeout);
+            
+          room.readyTimeout = setTimeout(() => {
+            room.readyTimeout = undefined;
+            // user paused during READY; keep paused
+            if (room.userPaused) {
+              room.pauseMessage = "PAUSED";
+              room.paused = true;
+              broadcastState(room);
+              return;
+            }
+            
+            // only proceed if we're still in READY state
+            if (!room.paused || room.pauseMessage !== "READY")
+              return;
+            
+            const atCenter = 
+              room.ball.x === WIDTH / 2 && 
+              room.ball.y === HEIGHT / 2;
+            
+            if (atCenter) {
+              const dir: 1 | -1 = (room.serveDir ?? 1);
+              
+              beginServe(room, dir, SERVE_DELAY_MS);
+              return;
+            }
+            
+            // Ball is not at center - resume match
+            room.paused = false;
+            room.pauseMessage = "";
+            broadcastState(room);
+          }, 1200);
+          
+          return;
+        }
 
         case "queue:leave":
           removeFromQueue(socket);
@@ -502,6 +737,7 @@ export async function gameWs(app: FastifyInstance) {
           if (!room)
             return;
           
+          room.userPaused = msg.paused;
           room.paused = msg.paused;
           
           if (room.paused) {
@@ -510,6 +746,7 @@ export async function gameWs(app: FastifyInstance) {
           }
           else {
             // resuming: if we had a pending serve, restart countdown with remaining ms
+            room.userPaused = false;
             room.pauseMessage = "";
             if (typeof room.pendingServeRemainingMs === "number") {
               const ms = room.pendingServeRemainingMs;
@@ -530,6 +767,8 @@ export async function gameWs(app: FastifyInstance) {
     });
 
       socket.on("close", (code, reason) => {
+        wsAlive.delete(socket);
+        socketToUserId.delete(socket);
         removeFromQueue(socket);
 
         const info = socketToMatch.get(socket);
@@ -545,18 +784,32 @@ export async function gameWs(app: FastifyInstance) {
           return;
         }
         
-        // mark disconnected + pause the game
-        if (info.role === "P1")
-          room.p1 = null;
-        else
-          room.p2 = null;
+        let didRemove = false;
         
-        if (room.serveTimeout) {
-          clearTimeout(room.serveTimeout);
-          room.serveTimeout = undefined;
+        if (info.role === "P1") {
+          if (room.p1 === socket) {
+            room.p1 = null;
+            didRemove = true;
+          }
         }
-        room.ball.vx = 0;
-        room.ball.vy = 0;
+        else {
+          if (room.p2 === socket) {
+            room.p2 = null;
+            didRemove = true;
+          }
+        }
+        
+        // IMPORTANT: always remove mapping for this socket now
+	socketToMatch.delete(socket);
+        
+        req.log.info({ matchId: info.matchId, role: info.role, didRemove }, "close processed");
+        
+        if (!didRemove) {
+  	  req.log.info({ code, reason: reason?.toString() }, "ws stale close ignored");
+  	  return;
+  	}
+        
+        freezeServeIfRunning(room);
         
         // clear old timeout for this role (if any)
         if (info.role === "P1" && room.p1DisconnectTimer) {
@@ -627,7 +880,6 @@ export async function gameWs(app: FastifyInstance) {
         else
           room.p2DisconnectTimer = timer;
           
-        socketToMatch.delete(socket);
         req.log.info({ code, reason: reason?.toString() }, "ws disconnected");
       });
   });
