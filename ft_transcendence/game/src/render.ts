@@ -44,20 +44,39 @@ export const	drawGameOver = (
 	width:		number,
 	height:		number,
 	leftScore:	number,
-	rightScore:	number
+	rightScore:	number,
+	winner: "P1" | "P2" | null = null,
+	youAre: "P1" | "P2" | null = null
 ) => {
-	ctx.fillStyle = "white";
-	ctx.font = "48px Arial";
+	ctx.fillStyle = "white"
 	ctx.textAlign = "center";
-	ctx.fillText("GAME OVER", width / 2, height / 2 - 20);
-
+	
+	// Title 
+	ctx.font = "48px Arial";
+	ctx.fillText("GAME OVER", width / 2, height / 2 - 60);
+	
+	// Score
+	ctx.font = "28px Arial";
+	ctx.fillText(`Score: ${leftScore} - ${rightScore}`, width / 2, height / 2 - 15);
+	
+	// Winner: trust explicit winner first 
 	let	winnerText = "";
-	if (leftScore > rightScore)
-		winnerText = "Left Player Wins!";
-	else if (rightScore > leftScore)
-		winnerText = "Right Player Wins!";
+	
+	if (winner === "P1")
+	  winnerText = "Left Player Wins!";
+	else if (winner === "P2")
+	  winnerText = "Right Player Wins!";
+	else {
+	  if (leftScore > rightScore)
+	    winnerText = "Left Player Wins!";
+	  else if (rightScore > leftScore)
+	    winnerText = "Right Player Wins!";
+	  else
+	    winnerText = "Draw";
+	}
+	
 	ctx.font = "32px Arial";
-	ctx.fillText(winnerText, width / 2, height / 2 + 30);
+	ctx.fillText(winnerText, width / 2, height / 2 + 35);
 };
 
 export const	drawPausedOverlay = (

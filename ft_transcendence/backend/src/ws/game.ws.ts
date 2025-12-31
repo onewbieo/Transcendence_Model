@@ -24,6 +24,7 @@ const BALL_SPEEDUP = 1.06;
 const BALL_MAX_SPEED = 14;
 
 const SERVE_DELAY_MS = 1200;
+const DISCONNECT_GRACE_MS = 10_000;
 
 // types //
 
@@ -191,7 +192,7 @@ function forceCloseCleanup(ws: WebSocket, why: string) {
   // but we need to trigger it here if the close event never arrives.
   // So: simulate the start of grace period.
   room.paused = true;
-  room.pauseMessage = `WAITING 10s FOR RECONNECT (${why})`;
+  room.pauseMessage = `WAITING FOR RECONNECT (${why})`;
   broadcastState(room);
 
   // if you want: start grace timer here too (optional)
@@ -339,6 +340,17 @@ function broadcastState(room :Room) {
   
   send(room.p1, payload);
   send(room.p2, payload);
+}
+
+function endMatch(room: Room, matchId: string, winner: Role) {
+  const payload: ServerMsg = {
+    type: "game:over",
+    winner,
+    score: { p1: room.scoreP1, p2: room.scoreP2 },
+  };
+  send(room.p1, payload);
+  send(room.p2, payload);
+  cleanupMatch(matchId);
 }
 
 function freezeServeIfRunning(room: Room) {
@@ -635,23 +647,22 @@ export async function gameWs(app: FastifyInstance) {
           socketToMatch.set(socket, { matchId, role: youAre });
           send(socket, { type: "match:found", matchId, youAre });
           room.userPaused = false;
-          
-          // cancel grace timer for this role
-          if (youAre === "P1" && room.p1DisconnectTimer) {
-            clearTimeout(room.p1DisconnectTimer);
-            room.p1DisconnectTimer = undefined;
-          }
-          
-          if (youAre === "P2" && room.p2DisconnectTimer) {
-            clearTimeout(room.p2DisconnectTimer);
-            room.p2DisconnectTimer = undefined;
-          }
-          
+             
           // if both players are back, pause 
           if (room.p1 && room.p2) {
             if (room.disconnectCountdownInterval) {
               clearInterval(room.disconnectCountdownInterval);
               room.disconnectCountdownInterval = undefined;
+    	    }
+    	    // clear the one grace timer (we're reusing p1DisconnectTimer as "room timer")
+    	    if (room.p1DisconnectTimer) {
+    	      clearTimeout(room.p1DisconnectTimer);
+    	      room.p1DisconnectTimer = undefined;
+    	    }
+    	    
+    	    if (room.p2DisconnectTimer) {
+    	      clearTimeout(room.p2DisconnectTimer);
+    	      room.p2DisconnectTimer = undefined;
     	    }
             room.disconnectDeadlineMs = undefined;
           }
@@ -811,75 +822,96 @@ export async function gameWs(app: FastifyInstance) {
         
         freezeServeIfRunning(room);
         
-        // clear old timeout for this role (if any)
-        if (info.role === "P1" && room.p1DisconnectTimer) {
-          clearTimeout(room.p1DisconnectTimer);
-          room.p1DisconnectTimer = undefined;
-        }
-        if (info.role === "P2" && room.p2DisconnectTimer) {
-          clearTimeout(room.p2DisconnectTimer);
-          room.p2DisconnectTimer = undefined;
-        }
-        if (room.disconnectCountdownInterval) {
-          clearInterval(room.disconnectCountdownInterval);
-          room.disconnectCountdownInterval = undefined;
+        if (room.readyTimeout) {
+          clearTimeout(room.readyTimeout);
+          room.readyTimeout = undefined;
         }
         
-        const winner: Role =
-          room.p1 === null && room.p2 !== null ? "P2" :
-          room.p2 === null && room.p1 !== null ? "P1" :
-          // fallback
-          (info.role === "P1" ? "P2" : "P1");
+        const graceAlreadyRunning =
+          typeof room.disconnectDeadlineMs === "number" &&
+          room.disconnectDeadlineMs > Date.now();
         
-        // set deadline 10s from now
-        room.disconnectDeadlineMs = Date.now() + 10_000;
-        
-        // pause + push first message
-        room.paused = true;
-        room.pauseMessage = "WAITING 10s FOR RECONNECT";
-        broadcastState(room);
-            
-        // update message every 1s
-        room.disconnectCountdownInterval = setInterval(() => {
-          const msLeft = (room.disconnectDeadlineMs ?? 0) - Date.now();
-          const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
-          
-          room.pauseMessage = `WAITING ${secLeft}s FOR RECONNECT`;
-          broadcastState(room);
-            
-          if (secLeft <= 0 && room.disconnectCountdownInterval) {
-                  clearInterval(room.disconnectCountdownInterval);
-                  room.disconnectCountdownInterval = undefined;
+        if (!graceAlreadyRunning) {
+          if (room.p1DisconnectTimer) {
+            clearTimeout(room.p1DisconnectTimer);
+            room.p1DisconnectTimer = undefined;
           }
-        }, 1000);
-            
-        const timer = setTimeout(() => {
-          // if player still missing after grace period -> end game
-          const stillMissing =
-            winner === "P1" ? room.p2 === null : room.p1 === null;
-              
+          
+          if (room.p2DisconnectTimer) {
+            clearTimeout(room.p2DisconnectTimer);
+            room.p2DisconnectTimer = undefined;
+          }
+          
           if (room.disconnectCountdownInterval) {
             clearInterval(room.disconnectCountdownInterval);
             room.disconnectCountdownInterval = undefined;
           }
-              
-          if (stillMissing) {
-            send(room.p1, { type: "game:over", winner, score: { p1: room.scoreP1, p2: room.scoreP2 } });
-            send(room.p2, { type: "game:over", winner, score: { p1: room.scoreP1, p2: room.scoreP2 } });
-            cleanupMatch(info.matchId);
-          }
-          else {
-            room.pauseMessage = "";
-            room.paused = false;
-            broadcastState(room);
-          }
-        }, 10_000);
-            
-        if (info.role === "P1")
-          room.p1DisconnectTimer = timer;
-        else
-          room.p2DisconnectTimer = timer;
           
+          room.disconnectDeadlineMs = Date.now() + DISCONNECT_GRACE_MS;
+        }
+        
+        // Always pause + show countdown (but don't reset the deadline)
+        room.paused = true;
+        
+        // Immediate message uses remaining time( no more "WAITING 10s" reset)
+        {
+          const msLeft = (room.disconnectDeadlineMs ?? 0) - Date.now();
+          const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
+          room.pauseMessage = `WAITING ${secLeft}s FOR RECONNECT`;
+        }
+        broadcastState(room);
+        
+        // Start the countdown interval only once
+        if (!room.disconnectCountdownInterval) {
+          room.disconnectCountdownInterval = setInterval(() => {
+            const msLeft = (room.disconnectDeadlineMs ?? 0) - Date.now();
+            const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
+            
+            room.pauseMessage = `WAITING ${secLeft}s FOR RECONNECT`;
+            broadcastState(room);
+            
+            if (secLeft <= 0 && room.disconnectCountdownInterval) {
+              clearInterval(room.disconnectCountdownInterval);
+              room.disconnectCountdownInterval = undefined;
+            }
+          }, 1000);
+        }
+
+        // Start the end of grace timeout only once
+        if (!room.p1DisconnectTimer) {
+          const msLeft = Math.max(0, (room.disconnectDeadlineMs ?? 0) - Date.now());
+          
+          room.p1DisconnectTimer = setTimeout(() => {
+            room.p1DisconnectTimer = undefined;
+            // stop the countdown ticker 
+            if (room.disconnectCountdownInterval) {
+              clearInterval(room.disconnectCountdownInterval);
+              room.disconnectCountdownInterval = undefined;
+            }
+            
+            const p1Missing = room.p1 === null;
+            const p2Missing = room.p2 === null;
+            
+            // if someone is still missing, forfeit and end match
+            if (p1Missing || p2Missing) {
+              // winner is the one still present (if both missing, just cleanup)
+              if (p1Missing && p2Missing) {
+                cleanupMatch(info.matchId);
+                return;
+              }
+              const winner: Role = p1Missing ? "P2" : "P1";
+              endMatch(room, info.matchId, winner);
+              return;
+            }
+            
+            // both are back by the time grace expires: resume
+            room.paused = false;
+            room.pauseMessage = "";
+            room.disconnectDeadlineMs = undefined;
+            
+            broadcastState(room);
+          }, msLeft);
+        }
         req.log.info({ code, reason: reason?.toString() }, "ws disconnected");
       });
   });

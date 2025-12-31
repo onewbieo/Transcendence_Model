@@ -40,6 +40,7 @@ window.addEventListener("DOMContentLoaded", () => {
     let serverP2Y = 0;
     let serverScoreL = 0;
     let serverScoreR = 0;
+    let serverWinner = null;
     const wsUrl = makeWsUrl();
     console.log("WS URL:", wsUrl);
     const ws = new WebSocket(wsUrl);
@@ -67,7 +68,9 @@ window.addEventListener("DOMContentLoaded", () => {
     ws.onopen = () => {
         console.log("WS open");
         matched = false;
-        youAre = null;
+        // reset match-end UI
+        gameOver = false;
+        serverWinner = null;
         joinSent = false;
         if (joinTimer)
             window.clearTimeout(joinTimer);
@@ -92,6 +95,9 @@ window.addEventListener("DOMContentLoaded", () => {
         if (msg.type === "match:found") {
             matched = true;
             youAre = msg.youAre;
+            // new match UI reset
+            gameOver = false;
+            serverWinner = null;
             if (joinTimer)
                 window.clearTimeout(joinTimer);
             joinTimer = undefined;
@@ -138,11 +144,17 @@ window.addEventListener("DOMContentLoaded", () => {
             // update authoritative scores from game:over payload
             serverScoreL = msg.score.p1;
             serverScoreR = msg.score.p2;
+            const w = msg.winner;
+            if (w === "P1" || w === "P2")
+                serverWinner = w;
+            else
+                serverWinner = null;
             // stop the client
             gameOver = true;
-            if (!serverPaused) {
-                serverUserPaused = false;
-            }
+            // ensure gameover isn't hidden behing pause overlay logic
+            serverPaused = false;
+            serverPauseMessage = "";
+            serverUserPaused = false;
             return;
         }
     };
@@ -383,10 +395,12 @@ window.addEventListener("DOMContentLoaded", () => {
         if (gameOver) {
             render();
             if (matched) {
-                drawGameOver(ctx, width, height, serverScoreL, serverScoreR);
+                drawGameOver(ctx, width, height, serverScoreL, serverScoreR, serverWinner, youAre);
             }
             else {
-                drawGameOver(ctx, width, height, leftScore, rightScore);
+                // single player: compute winner from score
+                const winner = leftScore > rightScore ? "P1" : rightScore > leftScore ? "P2" : null;
+                drawGameOver(ctx, width, height, leftScore, rightScore, winner, null);
             }
             return;
         }

@@ -27,18 +27,31 @@ export const drawScore = (ctx, leftScore, rightScore, width) => {
     ctx.fillText(leftScore.toString(), width / 4, 50);
     ctx.fillText(rightScore.toString(), (width * 3) / 4, 50);
 };
-export const drawGameOver = (ctx, width, height, leftScore, rightScore) => {
+export const drawGameOver = (ctx, width, height, leftScore, rightScore, winner = null, youAre = null) => {
     ctx.fillStyle = "white";
-    ctx.font = "48px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("GAME OVER", width / 2, height / 2 - 20);
+    // Title 
+    ctx.font = "48px Arial";
+    ctx.fillText("GAME OVER", width / 2, height / 2 - 60);
+    // Score
+    ctx.font = "28px Arial";
+    ctx.fillText(`Score: ${leftScore} - ${rightScore}`, width / 2, height / 2 - 15);
+    // Winner: trust explicit winner first 
     let winnerText = "";
-    if (leftScore > rightScore)
+    if (winner === "P1")
         winnerText = "Left Player Wins!";
-    else if (rightScore > leftScore)
+    else if (winner === "P2")
         winnerText = "Right Player Wins!";
+    else {
+        if (leftScore > rightScore)
+            winnerText = "Left Player Wins!";
+        else if (rightScore > leftScore)
+            winnerText = "Right Player Wins!";
+        else
+            winnerText = "Draw";
+    }
     ctx.font = "32px Arial";
-    ctx.fillText(winnerText, width / 2, height / 2 + 30);
+    ctx.fillText(winnerText, width / 2, height / 2 + 35);
 };
 export const drawPausedOverlay = (ctx, msg, width, height) => {
     ctx.font = "32px Arial";
