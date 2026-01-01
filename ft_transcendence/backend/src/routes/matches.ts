@@ -18,7 +18,8 @@ export async function matchRoutes(app: FastifyInstance) {
         player2Id?: number;
         player1Score?: number;
         player2Score?: number;
-        status?: "FINISHED" | "ABORTED";
+        status?: "FINISHED" | "DRAW";
+        winnerId?: number | null;
         durationMs?: number;
       };
 
@@ -48,8 +49,8 @@ export async function matchRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "scores cannot be negative" });
       }
 
-      if (status !== "FINISHED" && status !== "ABORTED") {
-        return reply.code(400).send({ error: "status must be FINISHED or ABORTED" });
+      if (status !== "FINISHED" && status !== "DRAW") {
+        return reply.code(400).send({ error: "status must be FINISHED or DRAW" });
       }
 
       // IMPORTANT security rule (simple MVP):
@@ -63,14 +64,33 @@ export async function matchRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "you can only create matches that include yourself" });
       }
 
-      // Decide winner
+      // Decide winner (project semantics)
+      // -FINISHED: must have a winnerId (disconnect win OR score win)
+      // -DRAW: winnerId must be null
       let winnerId: number | null = null;
-      if (status === "FINISHED") {
-        if (player1Score > player2Score) winnerId = player1Id;
-        else if (player2Score > player1Score) winnerId = player2Id;
-        else winnerId = null; // draw
-      } else {
-        winnerId = null; // aborted
+      
+      if (status === "DRAW") {
+        // draw can be at ANY score if both disconnected
+        winnerId = null;
+        
+        // optional strictness: if client sends winnerId for DRAW -> reject
+        if (body.winnerId !== undefined && body.winnerId !== null) {
+          return reply.code(400).send({ error: "DRAW must have winnerId=null" });
+        }
+      }
+      else {
+        // FINISHED: winner must be explicit (do NOT infer from score)
+        const w = body.winnerId;
+        
+        if (!Number.isFinite(w)) {
+          return reply.code(400).send({ error: "FINISHED requires winnerId" });
+        }
+        
+        if (w !== player1Id && w !== player2Id) {
+          return reply.code(400).send({ error: "winnerId must be player1Id or player2Id" });
+        }
+        
+        winnerId = w as number;
       }
 
       // Optional: ensure users exist (nice error instead of FK crash)

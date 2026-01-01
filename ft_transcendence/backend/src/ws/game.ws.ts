@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 import crypto from "node:crypto";
+import { prisma } from "../prisma.js";
 
 type Role = "P1" | "P2";
 
@@ -83,6 +84,8 @@ type Room = {
   paused: boolean;
   userPaused?: boolean;
   
+  isEnding?: boolean;
+  
   pauseMessage: string;
   serveTimeout?: NodeJS.Timeout;
   serveStartAtMs?: number;
@@ -98,6 +101,9 @@ type Room = {
   // grace countdown
   disconnectDeadlineMs?: number;
   disconnectCountdownInterval?: NodeJS.Timeout;
+  
+  matchDbId: number; // Prisma Match.id 
+  startedAtMs: number; // for durationMs
   
   readyTimeout?: NodeJS.Timeout;
   
@@ -342,14 +348,51 @@ function broadcastState(room :Room) {
   send(room.p2, payload);
 }
 
-function endMatch(room: Room, matchId: string, winner: Role) {
-  const payload: ServerMsg = {
-    type: "game:over",
-    winner,
-    score: { p1: room.scoreP1, p2: room.scoreP2 },
-  };
-  send(room.p1, payload);
-  send(room.p2, payload);
+async function endMatchFinished(room: Room, matchId: string, winner: Role) {
+  const winnerUserId = winner === "P1" ? room.p1UserId : room.p2UserId;
+  const durationMs = Date.now() - room.startedAtMs;
+
+  try {
+    await prisma.match.update({
+      where: { id: room.matchDbId },
+      data: {
+        status: "FINISHED",
+        player1Score: room.scoreP1,
+        player2Score: room.scoreP2,
+        winnerId: winnerUserId,
+        durationMs,
+      },
+    });
+  } catch (e) {
+    console.error("Failed to update match FINISHED", e);
+  }
+
+  send(room.p1, { type: "game:over", winner, score: { p1: room.scoreP1, p2: room.scoreP2 } });
+  send(room.p2, { type: "game:over", winner, score: { p1: room.scoreP1, p2: room.scoreP2 } });
+
+  cleanupMatch(matchId);
+}
+
+async function endMatchDraw(room: Room, matchId: string) {
+  const durationMs = Date.now() - room.startedAtMs;
+
+  try {
+    await prisma.match.update({
+      where: { id: room.matchDbId },
+      data: {
+        status: "DRAW",
+        player1Score: room.scoreP1,
+        player2Score: room.scoreP2,
+        winnerId: null,
+        durationMs,
+      },
+    });
+  } catch (e) {
+    console.error("Failed to update match DRAW", e);
+  }
+
+  // optional: tell clients (if any still connected)
+  // You can also reuse game:over with a fake winner, but better is a new msg type later.
   cleanupMatch(matchId);
 }
 
@@ -404,7 +447,7 @@ export async function gameWs(app: FastifyInstance) {
       
       send(socket, { type: "connected" });
 
-      socket.on("message", (raw) => {
+      socket.on("message", async (raw) => {
       const msg = safeJson(raw) as ClientMsg | null;
       if (!msg)
         return;
@@ -467,6 +510,14 @@ export async function gameWs(app: FastifyInstance) {
 
           const startY = (HEIGHT - PADDLE_HEIGHT) / 2;
           
+          const dbMatch = await prisma.match.create({
+            data: {
+              status: "ONGOING",
+              player1Id: p1UserId,
+              player2Id: p2UserId,
+            },
+          });
+          
           const room: Room = {
             p1,
             p2,
@@ -491,6 +542,9 @@ export async function gameWs(app: FastifyInstance) {
             
             scoreP1: 0,
             scoreP2: 0,
+            
+            matchDbId: dbMatch.id,
+            startedAtMs: Date.now(),
           };
           
           rooms.set(matchId, room);
@@ -502,6 +556,9 @@ export async function gameWs(app: FastifyInstance) {
           
           // 60 fps-ish loop
           room.interval = setInterval(() => {
+            if (room.isEnding)
+              return;
+            
             room.tick += 1;
             
             if (!room.paused) {
@@ -569,10 +626,16 @@ export async function gameWs(app: FastifyInstance) {
               if (room.ball.x + BALL_RADIUS < 0) {
                 // P2 Scores
                 room.scoreP2 += 1;
-                if (room.scoreP2 >= MAX_SCORE) {
-                  send(room.p1, { type: "game:over", winner: "P2", score: { p1: room.scoreP1, p2: room.scoreP2 } });
-                  send(room.p2, { type: "game:over", winner: "P2", score: { p1: room.scoreP1, p2: room.scoreP2 } });
-                  cleanupMatch(matchId);
+                if (!room.isEnding && room.scoreP2 >= MAX_SCORE) {
+                  room.isEnding = true;
+                  room.paused = true;
+                  
+                  if (room.interval) {
+                    clearInterval(room.interval);
+                    room.interval = undefined;
+                  }
+                  
+                  void endMatchFinished(room, matchId, "P2");
                   return;
                 }
                 beginServe(room, 1); // serve toward P2
@@ -581,10 +644,16 @@ export async function gameWs(app: FastifyInstance) {
               if (room.ball.x - BALL_RADIUS > WIDTH) {
                 // P1 scores
                 room.scoreP1 += 1;
-                if (room.scoreP1 >= MAX_SCORE) {
-                  send(room.p1, { type: "game:over", winner: "P1", score: { p1:  room.scoreP1, p2: room.scoreP2 } });
-                  send(room.p2, { type: "game:over", winner: "P1", score: { p1: room.scoreP1, p2: room.scoreP2 } });
-                  cleanupMatch(matchId);
+                if (!room.isEnding && room.scoreP1 >= MAX_SCORE) {
+                  room.isEnding = true;
+                  room.paused = true;
+                  
+                  if (room.interval) {
+                    clearInterval(room.interval);
+                    room.interval = undefined;
+                  }
+                  
+                  void endMatchFinished(room, matchId, "P1");
                   return;
                 }
                 beginServe(room, -1); // serve toward P1
@@ -894,13 +963,13 @@ export async function gameWs(app: FastifyInstance) {
             
             // if someone is still missing, forfeit and end match
             if (p1Missing || p2Missing) {
-              // winner is the one still present (if both missing, just cleanup)
+              // winner is the one still present (if both missing, DRAW)
               if (p1Missing && p2Missing) {
-                cleanupMatch(info.matchId);
+                void endMatchDraw(room, info.matchId);
                 return;
               }
               const winner: Role = p1Missing ? "P2" : "P1";
-              endMatch(room, info.matchId, winner);
+              void endMatchFinished(room, info.matchId, winner);
               return;
             }
             
