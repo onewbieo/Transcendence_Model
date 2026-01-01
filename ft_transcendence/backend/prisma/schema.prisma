@@ -23,6 +23,17 @@ enum MatchStatus {
   DRAW
 }
 
+enum TournamentStatus {
+  OPEN
+  ONGOING
+  FINISHED
+}
+
+enum Bracket {
+  WINNERS
+  LOSERS
+}
+
 model User {
   id            Int      @id @default(autoincrement())
   email         String   @unique
@@ -34,18 +45,18 @@ model User {
   matchesAsP1   Match[]  @relation("MatchPlayer1")
   matchesAsP2   Match[]  @relation("MatchPlayer2")
   wins          Match[]  @relation("MatchWinner")
+  
+  tournaments   TournamentParticipant[]
 }
 
 model Match {
   id            Int           @id @default(autoincrement())
   createdAt     DateTime      @default(now())
-  
   status        MatchStatus   @default(ONGOING)
   
   // players (always PVP)
   player1Id     Int
   player2Id     Int
-  
   player1       User          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: Restrict)
   player2       User          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: Restrict)
   
@@ -59,7 +70,42 @@ model Match {
   
   durationMs    Int?
   
+  // tournament linkage (optional)
+  tournamentId  Int?
+  tournament    Tournament?   @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  
+  round         Int?
+  bracket       Bracket?
+  slot          Int? // bracket position
+  
+  @@index([tournamentId])
   @@index([player1Id, createdAt])
   @@index([player2Id, createdAt])
   @@index([winnerId])
 }
+
+model Tournament {
+  id              Int                 @id @default(autoincrement())
+  createdAt       DateTime            @default(now())
+  name            String
+  status          TournamentStatus    @default(OPEN)
+  
+  participants    TournamentParticipant[]
+  matches         Match[]
+}
+
+model TournamentParticipant {
+  id              Int                 @id @default(autoincrement())
+  tournamentId    Int
+  userId          Int
+  joinedAt        DateTime            @default(now())
+  
+  tournament      Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade) 
+  
+  @@unique([tournamentId, userId])
+  @@index([tournamentId])
+  @@index([userId])
+}
+  
+

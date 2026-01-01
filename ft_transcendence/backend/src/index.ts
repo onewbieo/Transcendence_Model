@@ -7,7 +7,9 @@ import { healthRoutes } from "./routes/health";
 import { userRoutes } from "./routes/users";
 import { authRoutes } from "./routes/auth";
 import { matchRoutes } from "./routes/matches";
+import { tournamentRoutes } from "./routes/tournaments";
 import { gameWs } from "./ws/game.ws";
+
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -64,10 +66,11 @@ async function main() {
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(matchRoutes);
+  await app.register(tournamentRoutes);
   
   app.get("/", async () => ({
   	ok: true,
-  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id",],
+  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id", "/tournaments", "/tournaments/:id/join", "/tournaments/:id/bracket",],
   }));
   
   await app.listen({ host: "0.0.0.0", port: 3000 });
