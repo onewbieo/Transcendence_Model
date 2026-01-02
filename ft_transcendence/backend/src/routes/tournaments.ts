@@ -63,7 +63,7 @@ export async function tournamentRoutes(app: FastifyInstance) {
       }
       catch (err:any) {
         // Unique constraint = already joined
-        if (err.code === "P2002") {
+        if (err?.code === "P2002") {
           return reply.code(409).send({ error: "already joined" });
          }
          throw err;
