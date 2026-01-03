@@ -6,7 +6,6 @@ import { getToken } from "./lib/auth";
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getToken());
 
-  // in case token changes (login/logout), re-check
   useEffect(() => {
     const onStorage = () => setHasToken(!!getToken());
     window.addEventListener("storage", onStorage);
@@ -17,5 +16,3 @@ export default function App() {
 
   return <HomePage onLogout={() => setHasToken(false)} />;
 }
-
-

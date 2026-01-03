@@ -1,30 +1,79 @@
 import { useEffect, useState } from "react";
 import { me } from "../api";
 import { clearToken } from "../lib/auth";
+import ProfilePage from "./ProfilePage";
+import MatchesPage from "./MatchesPages";
+import LeaderboardPage from "./LeaderboardPage";
+import TournamentsPage from "./TournamentsPage";
+import LobbyPage from "./LobbyPage";
+
+type MeUser = { id: number; email: string; name: string | null; role: string; createdAt: string };
+type Tab = "home" | "profile" | "matches" | "leaderboard" | "tournaments" | "lobby";
 
 export default function HomePage({ onLogout }: { onLogout: () => void }) {
-  const [meJson, setMeJson] = useState<any>(null);
+  const [tab, setTab] = useState<Tab>("home");
+  const [meUser, setMeUser] = useState<MeUser | null>(null);
   const [status, setStatus] = useState("loading...");
 
+  async function refreshMe() {
+    const data = await me();
+    setMeUser(data.me);
+    return data.me;
+  }
+
   useEffect(() => {
-    me()
-      .then((data) => {
-        setMeJson(data.me);
-        setStatus("ok ✅");
-      })
-      .catch((e) => {
+    refreshMe()
+      .then(() => setStatus("ok ✅"))
+      .catch((e: any) => {
         setStatus(`failed ❌ ${e?.message ?? ""}`);
         clearToken();
         onLogout();
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (tab === "profile") {
+    return (
+      <ProfilePage
+        meUser={meUser}
+        refreshMe={refreshMe}
+        goHome={() => setTab("home")}
+      />
+    );
+  }
+  
+  if (tab === "matches") {
+    return <MatchesPage goHome={() => setTab("home")} />;
+  }
+  
+  if (tab === "leaderboard") {
+    return <LeaderboardPage goHome={() => setTab("home")} />;
+  }
+  
+  if (tab === "tournaments") {
+    return <TournamentsPage goHome={() => setTab("home")} />;
+  }
+  
+  if (tab === "lobby") {
+    return <LobbyPage goHome={() => setTab("home")} />;
+  }
+
+  // tab === "home"
   return (
     <div style={{ maxWidth: 720, margin: "48px auto", padding: 24 }}>
       <h1>ft_transcendence</h1>
       <p>Status: {status}</p>
 
+      <p>
+        Logged in as: <b>{meUser?.name ?? "(no name yet)"}</b>
+      </p>
+
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button onClick={() => setTab("profile")}>Profile</button>
+        <button onClick={() => setTab("matches")}>Matches</button>
+        <button onClick={() => setTab("leaderboard")}>Leaderboard</button>
+        <button onClick={() => setTab("tournaments")}>Tournaments</button>
+        <button onClick={() => setTab("lobby")}>Lobby</button>
         <button
           onClick={() => {
             clearToken();
@@ -37,17 +86,8 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
 
       <h2 style={{ marginTop: 24 }}>Me</h2>
       <pre style={{ padding: 12, background: "#111", color: "#eee", overflowX: "auto" }}>
-        {JSON.stringify(meJson, null, 2)}
+        {JSON.stringify(meUser, null, 2)}
       </pre>
-
-      <h2 style={{ marginTop: 24 }}>Next pages to build</h2>
-      <ul>
-        <li>Profile page (PATCH /users/me)</li>
-        <li>Match history (GET /matches)</li>
-        <li>Leaderboard (GET /leaderboard)</li>
-        <li>Tournaments (POST /tournaments, join, bracket)</li>
-        <li>Game lobby + WS</li>
-      </ul>
     </div>
   );
 }
