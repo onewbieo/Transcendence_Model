@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../prisma";
+import { generateTournamentMatches } from "../services/tournamentService";
 
 export async function tournamentRoutes(app: FastifyInstance) {
   // POST /tournaments (protected)
@@ -28,6 +29,40 @@ export async function tournamentRoutes(app: FastifyInstance) {
     }
   );
   
+  // POST /tournaments/:id/start (protected) - start the tournament and generate matches
+  app.post(
+    "/tournaments/:id/start",
+    { preHandler: (app as any).authenticate },
+    async (req: any, reply) => {
+      const tournamentId = Number(req.params.id);
+      
+      if (!Number.isFinite(tournamentId)) {
+        return reply.code(400).send({ error: "invalid tournament id" });
+      }
+      
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: tournamentId },
+        select: { id: true, status: true },
+      });
+      
+      if (!tournament) {
+        return reply.code(404).send({ error: "tournament not found" });
+      }
+      
+      if (tournament.status !== "OPEN") {
+        return reply.code(400).send({ error: "tournament is not open" });
+      }
+      
+      try {
+        await generateTournamentMatches(tournamentId);
+        return reply.send({ message: "Tournament started, matches generated" });
+      }
+      catch (error) {
+        return reply.code(500).send({ error: error.message });
+      }
+    }
+  );  
+      
   // POST /tournaments/:id/join
   app.post(
     "/tournaments/:id/join",
@@ -102,12 +137,18 @@ export async function tournamentRoutes(app: FastifyInstance) {
             round: true,
             bracket: true,
             slot: true,
-            player1Id: true,
-            player2Id: true,
+            status: true,
+            
             player1Score: true,
             player2Score: true,
             winnerId: true,
-            status: true,
+            
+            player1: {
+              select: {id: true, name: true },
+            },
+            player2: {
+              select: { id: true, name: true },
+            },
           },
         },
       },

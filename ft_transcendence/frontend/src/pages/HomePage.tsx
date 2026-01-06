@@ -6,9 +6,10 @@ import MatchesPage from "./MatchesPages";
 import LeaderboardPage from "./LeaderboardPage";
 import TournamentsPage from "./TournamentsPage";
 import LobbyPage from "./LobbyPage";
+import GamePage from "./GamePage";
 
 type MeUser = { id: number; email: string; name: string | null; role: string; createdAt: string };
-type Tab = "home" | "profile" | "matches" | "leaderboard" | "tournaments" | "lobby";
+type Tab = "home" | "profile" | "matches" | "leaderboard" | "tournaments" | "lobby" | "game";
 
 export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("home");
@@ -57,6 +58,10 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   if (tab === "lobby") {
     return <LobbyPage goHome={() => setTab("home")} />;
   }
+  
+  if (tab == "game") {
+    return <GamePage goHome={() => setTab("home")} />;
+  }
 
   // tab === "home"
   return (
@@ -74,6 +79,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         <button onClick={() => setTab("leaderboard")}>Leaderboard</button>
         <button onClick={() => setTab("tournaments")}>Tournaments</button>
         <button onClick={() => setTab("lobby")}>Lobby</button>
+        <button onClick={() => setTab("game")}>Game</button>
         <button
           onClick={() => {
             clearToken();

@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 import crypto from "node:crypto";
 import { prisma } from "../prisma.js";
+import { Bracket } from "@prisma/client";
+import { generateTournamentMatches } from "../services/tournamentService";
 
 type Role = "P1" | "P2";
 
@@ -35,7 +37,15 @@ type ClientMsg =
   | { type: "queue:leave" }
   | { type: "game:input"; dir: "up" | "down"; pressed: boolean }
   | { type: "game:pause"; paused: boolean }
-  | { type: "match:reconnect" };
+  | { type: "match:reconnect" }
+  | {
+       type: "tournament:join";
+       tournamentId: number;
+       bracket: Bracket;
+       round: number;
+       slot: number;
+     };
+    
 
 type ServerMsg =
   | { type: "connected" }
@@ -81,6 +91,11 @@ type Room = {
   scoreP1: number;
   scoreP2: number;
   
+  tournamentId?: number;
+  round?: number;
+  bracket?: Bracket;
+  slot?: number;
+  
   paused: boolean;
   userPaused?: boolean;
   
@@ -115,6 +130,14 @@ const socketToMatch = new Map<WebSocket, { matchId: string; role: Role }>();
 const waiting = new Set<WebSocket>();
 const socketToUserId = new Map<WebSocket, number>();
 const wsAlive = new Map<WebSocket, boolean>();
+const waitingByTournamentSlot = new Map<string, Set<WebSocket>>();
+
+// tournament slot -> roomId (your in memory matchId UUID)
+const roomByTournamentSlot = new Map<string, string>();
+
+function slotKey(tournamentId: number, bracket: Bracket, round: number, slot: number) {
+  return `${tournamentId}:${bracket}:${round}:${slot}`;
+} 
 
 setInterval(() => {
   for (const [ws, alive] of wsAlive) {
@@ -166,7 +189,9 @@ function safeJson(raw: any): any | null {
 function forceCloseCleanup(ws: WebSocket, why: string) {
   // remove queue
   waiting.delete(ws);
-
+  
+  removeFromAllTournamentSlotQueues(ws);
+  
   // remove identity maps
   socketToUserId.delete(ws);
   
@@ -325,6 +350,16 @@ function cleanupMatch(matchId : string) {
   if (room.disconnectCountdownInterval)
     clearInterval(room.disconnectCountdownInterval);
   
+  // If this room belongs to a tournament slot, remove slot -> room mapping
+  if (
+    typeof room.tournamentId === "number" &&
+    typeof room.round === "number" &&
+    typeof room.slot === "number" &&
+    room.bracket
+  ) {
+      roomByTournamentSlot.delete(slotKey(room.tournamentId, room.bracket, room.round, room.slot));
+  }
+  
   rooms.delete(matchId);
   if (room.p1)
     socketToMatch.delete(room.p1);
@@ -348,6 +383,79 @@ function broadcastState(room :Room) {
   send(room.p2, payload);
 }
 
+async function tryAdvanceTournamentAfterWin(params: {
+  tournamentId: number;
+  bracket: Bracket;
+  round: number;
+  slot: number;
+  winnerUserId: number;
+}) {
+  const { tournamentId, bracket, round, slot, winnerUserId } = params;
+
+  // You said mapping is: nextSlot = ceil(slot/2)
+  const nextRound = round + 1;
+  const nextSlot = Math.ceil(slot / 2);
+
+  // sibling slot: 1<->2, 3<->4, 5<->6...
+  const siblingSlot = slot % 2 === 1 ? slot + 1 : slot - 1;
+
+  // Find the sibling match (must be finished, with a winner)
+  const sibling = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      bracket,
+      round,
+      slot: siblingSlot,
+      status: "FINISHED",
+      winnerId: { not: null },
+    },
+    select: { winnerId: true },
+  });
+
+  // sibling not done yet -> cannot create next match
+  if (!sibling?.winnerId) return;
+
+  // Assign next match P1/P2 based on odd/even slot
+  // odd slot -> P1, even slot -> P2
+  const thisIsOdd = slot % 2 === 1;
+
+  const p1Id = thisIsOdd ? winnerUserId : sibling.winnerId;
+  const p2Id = thisIsOdd ? sibling.winnerId : winnerUserId;
+
+  // Avoid duplicate next match creation (no unique constraint in schema)
+  const existingNext = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      bracket,
+      round: nextRound,
+      slot: nextSlot,
+      status: "ONGOING",
+    },
+    select: { id: true },
+  });
+
+  if (existingNext) return;
+
+  // Create next round match
+  await prisma.match.create({
+    data: {
+      status: "ONGOING",
+      tournamentId,
+      bracket,
+      round: nextRound,
+      slot: nextSlot,
+      player1Id: p1Id,
+      player2Id: p2Id,
+    },
+  });
+
+  // Optional: if tournament still OPEN, mark it ONGOING
+  await prisma.tournament.updateMany({
+    where: { id: tournamentId, status: "OPEN" },
+    data: { status: "ONGOING" },
+  });
+}
+
 async function endMatchFinished(room: Room, matchId: string, winner: Role) {
   const winnerUserId = winner === "P1" ? room.p1UserId : room.p2UserId;
   const durationMs = Date.now() - room.startedAtMs;
@@ -361,9 +469,32 @@ async function endMatchFinished(room: Room, matchId: string, winner: Role) {
         player2Score: room.scoreP2,
         winnerId: winnerUserId,
         durationMs,
+        
+        // keep tournament coordinates (important for advancement queries)
+        tournamentId: room.tournamentId ?? undefined,
+        bracket: room.bracket ?? undefined,
+        round: room.round ?? undefined,
+        slot: room.slot ?? undefined,  
       },
     });
-  } catch (e) {
+    
+    if (
+      typeof room.tournamentId === "number" &&
+      typeof room.round === "number" &&
+      typeof room.slot === "number" &&
+      room.bracket
+    ) {
+        await tryAdvanceTournamentAfterWin({
+          tournamentId: room.tournamentId,
+          bracket: room.bracket,
+          round: room.round,
+          slot: room.slot,
+          winnerUserId,
+        });
+        await tryFinishTournamentIfFinal(room.tournamentId);
+      }
+  }
+  catch (e) {
     console.error("Failed to update match FINISHED", e);
   }
 
@@ -373,11 +504,76 @@ async function endMatchFinished(room: Room, matchId: string, winner: Role) {
   cleanupMatch(matchId);
 }
 
+function resetRoomForRematch(room: Room) {
+  // stop any in-flight timers related to old state
+  if (room.serveTimeout) {
+    clearTimeout(room.serveTimeout);
+    room.serveTimeout = undefined;
+  }
+  if (room.readyTimeout) {
+    clearTimeout(room.readyTimeout);
+    room.readyTimeout = undefined;
+  }
+  if (room.p1DisconnectTimer) {
+    clearTimeout(room.p1DisconnectTimer);
+    room.p1DisconnectTimer = undefined;
+  }
+  if (room.p2DisconnectTimer) {
+    clearTimeout(room.p2DisconnectTimer);
+    room.p2DisconnectTimer = undefined;
+  }
+  if (room.disconnectCountdownInterval) {
+    clearInterval(room.disconnectCountdownInterval);
+    room.disconnectCountdownInterval = undefined;
+  }
+
+  room.disconnectDeadlineMs = undefined;
+
+  // reset core match state
+  room.isEnding = false;
+  room.tick = 0;
+
+  room.p1Up = false;
+  room.p1Down = false;
+  room.p2Up = false;
+  room.p2Down = false;
+
+  room.scoreP1 = 0;
+  room.scoreP2 = 0;
+
+  room.p1Y = (HEIGHT - PADDLE_HEIGHT) / 2;
+  room.p2Y = (HEIGHT - PADDLE_HEIGHT) / 2;
+
+  room.userPaused = false;
+  room.paused = true;
+  room.pauseMessage = "REMATCH";
+
+  // force ball to center + stopped (beginServe will re-serve)
+  room.ball.x = WIDTH / 2;
+  room.ball.y = HEIGHT / 2;
+  room.ball.vx = 0;
+  room.ball.vy = 0;
+
+  room.pendingServeRemainingMs = undefined;
+  room.serveInProgress = false;
+  room.serveStartAtMs = undefined;
+  room.serveDelayMs = undefined;
+
+  room.startedAtMs = Date.now();
+}
+
 async function endMatchDraw(room: Room, matchId: string) {
   const durationMs = Date.now() - room.startedAtMs;
 
+  let saved: {
+    tournamentId: number | null;
+    round: number | null;
+    bracket: Bracket | null;
+    slot: number | null;
+  } | null = null;
+
   try {
-    await prisma.match.update({
+    saved = await prisma.match.update({
       where: { id: room.matchDbId },
       data: {
         status: "DRAW",
@@ -386,14 +582,58 @@ async function endMatchDraw(room: Room, matchId: string) {
         winnerId: null,
         durationMs,
       },
+      select: { tournamentId: true, round: true, bracket: true, slot: true },
     });
-  } catch (e) {
+  }
+  catch (e) {
     console.error("Failed to update match DRAW", e);
   }
 
-  // optional: tell clients (if any still connected)
-  // You can also reuse game:over with a fake winner, but better is a new msg type later.
-  cleanupMatch(matchId);
+  // If NOT tournament -> end normally
+  if (!saved?.tournamentId) {
+    cleanupMatch(matchId);
+    return;
+  }
+
+  // Tournament DRAW -> create rematch DB record, reuse SAME room
+  try {
+    const rematch = await prisma.match.create({
+      data: {
+        status: "ONGOING",
+        player1Id: room.p1UserId,
+        player2Id: room.p2UserId,
+        tournamentId: saved.tournamentId,
+        round: saved.round,
+        bracket: saved.bracket,
+        slot: saved.slot,
+      },
+      select: { id: true },
+    });
+
+    // switch room to new DB match id
+    room.matchDbId = rematch.id;
+
+    // reset room and re-serve
+    resetRoomForRematch(room);
+    room.serveDir = 1;
+    beginServe(room, 1, SERVE_DELAY_MS);
+
+    broadcastState(room);
+    console.log("Tournament DRAW - rematch started in same room");
+  }
+  catch (e) {
+    console.error("Failed to create tournament rematch", e);
+    // if rematch creation fails, at least clean up to avoid zombie rooms
+    cleanupMatch(matchId);
+  }
+}
+
+function removeFromAllTournamentSlotQueues(ws: WebSocket) {
+  for (const [key, q] of waitingByTournamentSlot) {
+    if (q.delete(ws) && q.size === 0) {
+      waitingByTournamentSlot.delete(key);
+    }
+  }
 }
 
 function freezeServeIfRunning(room: Room) {
@@ -410,6 +650,151 @@ function freezeServeIfRunning(room: Room) {
     room.serveTimeout = undefined;
   }
   room.serveInProgress = false;
+}
+
+function getTournamentSlotQueue(tournamentId: number, bracket: Bracket, round: number, slot: number) {
+  const key = slotKey(tournamentId, bracket, round, slot);
+  let q = waitingByTournamentSlot.get(key);
+  if (!q) {
+    q = new Set<WebSocket>();
+    waitingByTournamentSlot.set(key, q);
+  }
+  return q;
+}
+
+function startGameLoop(room: Room, matchId: string) {
+  // serve: start moving toward P2 initially (like your client)
+  resetBall(room, 1);
+
+  // 60 fps-ish loop
+  room.interval = setInterval(() => {
+    if (room.isEnding) return;
+
+    room.tick += 1;
+
+    if (!room.paused) {
+      // apply paddle movement from input flags
+      if (room.p1Up) room.p1Y -= PADDLE_SPEED;
+      if (room.p1Down) room.p1Y += PADDLE_SPEED;
+      if (room.p2Up) room.p2Y -= PADDLE_SPEED;
+      if (room.p2Down) room.p2Y += PADDLE_SPEED;
+
+      room.p1Y = clamp(room.p1Y, 0, HEIGHT - PADDLE_HEIGHT);
+      room.p2Y = clamp(room.p2Y, 0, HEIGHT - PADDLE_HEIGHT);
+
+      // move ball
+      room.ball.x += room.ball.vx;
+      room.ball.y += room.ball.vy;
+
+      // bounce top / bottom
+      if (room.ball.y - BALL_RADIUS < 0 || room.ball.y + BALL_RADIUS > HEIGHT) {
+        room.ball.vy *= -1;
+        room.ball.y = clamp(room.ball.y, BALL_RADIUS, HEIGHT - BALL_RADIUS);
+      }
+
+      // collide paddles
+      const p1Rect = paddleRect("P1", room.p1Y);
+      const p2Rect = paddleRect("P2", room.p2Y);
+
+      // going left
+      if (
+        room.ball.vx < 0 &&
+        hitPaddle(p1Rect.x, p1Rect.y, p1Rect.w, p1Rect.h, room.ball.x, room.ball.y, BALL_RADIUS)
+      ) {
+        const paddleCenter = room.p1Y + PADDLE_HEIGHT / 2;
+        const dist = room.ball.y - paddleCenter;
+        const normalized = clamp(dist / (PADDLE_HEIGHT / 2), -1, 1);
+
+        const speed = Math.min(
+          Math.hypot(room.ball.vx, room.ball.vy) * BALL_SPEEDUP,
+          BALL_MAX_SPEED
+        );
+
+        room.ball.vx = Math.abs(speed);
+        room.ball.vy = normalized * speed;
+
+        room.ball.x = p1Rect.x + p1Rect.w + BALL_RADIUS;
+      }
+
+      // going right
+      if (
+        room.ball.vx > 0 &&
+        hitPaddle(p2Rect.x, p2Rect.y, p2Rect.w, p2Rect.h, room.ball.x, room.ball.y, BALL_RADIUS)
+      ) {
+        const paddleCenter = room.p2Y + PADDLE_HEIGHT / 2;
+        const dist = room.ball.y - paddleCenter;
+        const normalized = clamp(dist / (PADDLE_HEIGHT / 2), -1, 1);
+
+        const speed = Math.min(
+          Math.hypot(room.ball.vx, room.ball.vy) * BALL_SPEEDUP,
+          BALL_MAX_SPEED
+        );
+
+        room.ball.vx = -Math.abs(speed);
+        room.ball.vy = normalized * speed;
+
+        room.ball.x = p2Rect.x - BALL_RADIUS;
+      }
+
+      // scoring (out of bounds)
+      if (room.ball.x + BALL_RADIUS < 0) {
+        // P2 Scores
+        room.scoreP2 += 1;
+        if (!room.isEnding && room.scoreP2 >= MAX_SCORE) {
+          room.isEnding = true;
+          room.paused = true;
+
+          if (room.interval) {
+            clearInterval(room.interval);
+            room.interval = undefined;
+          }
+
+          broadcastState(room);
+          void endMatchFinished(room, matchId, "P2");
+          return;
+        }
+
+        beginServe(room, 1); // serve toward P2
+      }
+
+      if (room.ball.x - BALL_RADIUS > WIDTH) {
+        // P1 scores
+        room.scoreP1 += 1;
+        if (!room.isEnding && room.scoreP1 >= MAX_SCORE) {
+          room.isEnding = true;
+          room.paused = true;
+
+          if (room.interval) {
+            clearInterval(room.interval);
+            room.interval = undefined;
+          }
+
+          broadcastState(room);
+          void endMatchFinished(room, matchId, "P1");
+          return;
+        }
+
+        beginServe(room, -1); // serve toward P1
+      }
+    }
+
+    broadcastState(room);
+  }, 16);
+}
+
+async function tryFinishTournamentIfFinal(tournamentId: number) {
+  // Tournament is only finished when there are ZERO matches that are not FINISHED.
+  // DRAW is not "done" because it triggers a rematch.
+  const remaining = await prisma.match.count({
+    where: { tournamentId, status: { not: "FINISHED" } }, // ONGOING or DRAW
+  });
+
+  if (remaining === 0) {
+    await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { status: "FINISHED" },
+    });
+  }
 }
 
 // main //
@@ -550,118 +935,8 @@ export async function gameWs(app: FastifyInstance) {
           rooms.set(matchId, room);
           socketToMatch.set(p1, { matchId, role: "P1" });
           socketToMatch.set(p2, { matchId, role: "P2" });
-          
-          // serve: start moving toward P2 initially (like your client)
-          resetBall(room, 1);
-          
-          // 60 fps-ish loop
-          room.interval = setInterval(() => {
-            if (room.isEnding)
-              return;
-            
-            room.tick += 1;
-            
-            if (!room.paused) {
-            
-              // apply paddle movement from input flags
-              if (room.p1Up)
-                room.p1Y -= PADDLE_SPEED;
-              if (room.p1Down)
-                room.p1Y += PADDLE_SPEED;
-              if (room.p2Up)
-                room.p2Y -= PADDLE_SPEED;
-              if (room.p2Down)
-                room.p2Y += PADDLE_SPEED;
-          
-              room.p1Y = clamp(room.p1Y, 0, HEIGHT - PADDLE_HEIGHT);
-              room.p2Y = clamp(room.p2Y, 0, HEIGHT - PADDLE_HEIGHT);
-          
-              // move ball
-              room.ball.x += room.ball.vx;
-              room.ball.y += room.ball.vy;
-          
-              // bounce top / bottom
-              if (room.ball.y - BALL_RADIUS < 0 || room.ball.y + BALL_RADIUS > HEIGHT) {
-                room.ball.vy *= -1;
-                room.ball.y = clamp(room.ball.y, BALL_RADIUS, HEIGHT - BALL_RADIUS);
-              }
-          
-              // collide paddles
-              const p1Rect = paddleRect("P1", room.p1Y);
-              const p2Rect = paddleRect("P2", room.p2Y);
-          
-              // going left
-              if (room.ball.vx < 0 && hitPaddle(p1Rect.x, p1Rect.y, p1Rect.w, p1Rect.h, room.ball.x, room.ball.y, BALL_RADIUS)) {
-                const paddleCenter = room.p1Y + PADDLE_HEIGHT / 2;
-                const dist = room.ball.y - paddleCenter;
-                const normalized = clamp(dist / (PADDLE_HEIGHT / 2), -1, 1);
-            
-                const speed = Math.min(
-                  Math.hypot(room.ball.vx, room.ball.vy) * BALL_SPEEDUP, BALL_MAX_SPEED
-                );
-            
-                room.ball.vx = Math.abs(speed);
-                room.ball.vy = normalized * speed;
-            
-                room.ball.x = p1Rect.x + p1Rect.w + BALL_RADIUS;
-              }
-          
-              // going right
-              if (room.ball.vx > 0 && hitPaddle(p2Rect.x, p2Rect.y, p2Rect.w, p2Rect.h, room.ball.x, room.ball.y, BALL_RADIUS)) {
-                const paddleCenter = room.p2Y + PADDLE_HEIGHT / 2;
-                const dist = room.ball.y - paddleCenter;
-                const normalized = clamp(dist / (PADDLE_HEIGHT /2), -1, 1);
-            
-                const speed = Math.min(
-                  Math.hypot(room.ball.vx, room.ball.vy) * BALL_SPEEDUP, BALL_MAX_SPEED
-                );
-            
-                room.ball.vx = -Math.abs(speed);
-                room.ball.vy = normalized * speed;
-            
-                room.ball.x = p2Rect.x - BALL_RADIUS;
-              }
-          
-              // scoring (out of bounds)
-              if (room.ball.x + BALL_RADIUS < 0) {
-                // P2 Scores
-                room.scoreP2 += 1;
-                if (!room.isEnding && room.scoreP2 >= MAX_SCORE) {
-                  room.isEnding = true;
-                  room.paused = true;
-                  
-                  if (room.interval) {
-                    clearInterval(room.interval);
-                    room.interval = undefined;
-                  }
-                  
-                  void endMatchFinished(room, matchId, "P2");
-                  return;
-                }
-                beginServe(room, 1); // serve toward P2
-              }
-          
-              if (room.ball.x - BALL_RADIUS > WIDTH) {
-                // P1 scores
-                room.scoreP1 += 1;
-                if (!room.isEnding && room.scoreP1 >= MAX_SCORE) {
-                  room.isEnding = true;
-                  room.paused = true;
-                  
-                  if (room.interval) {
-                    clearInterval(room.interval);
-                    room.interval = undefined;
-                  }
-                  
-                  void endMatchFinished(room, matchId, "P1");
-                  return;
-                }
-                beginServe(room, -1); // serve toward P1
-              }
-            }
-            broadcastState(room);
-          }, 16);
-
+         
+          startGameLoop(room, matchId);  
           return;
         }
         
@@ -776,7 +1051,240 @@ export async function gameWs(app: FastifyInstance) {
           
           return;
         }
-
+        
+        case "tournament:join": {
+          const tournamentId = Number(msg.tournamentId);
+          const bracket = msg.bracket;
+          const round = Number(msg.round);
+          const slot = Number(msg.slot);
+          
+          if (!Number.isFinite(tournamentId) || !Number.isFinite(round) || !Number.isFinite(slot))
+            return;
+          
+          if (!Number.isFinite(round) || round < 1)
+            return;
+          
+          if (!Number.isInteger(slot) || slot < 1)
+            return;
+          
+          // optional: ensure tournament exists + ONGOING
+          const tournament = await prisma.tournament.findunique({
+            where: { id: tournamentId },
+            select: { id: true, status: true },
+          });
+          
+          if (!tournament) {
+            send(socket, { type: "match:reconnect_denied", reason: "tournament not found" });
+            return;
+          }
+          
+          if (tournament.status !== "OPEN" && tournament.status !== "ONGOING") {
+            send(socket, { type : "match:reconnect_denied", reason: "tournament not active" });
+            return;
+          }
+          
+          // join tournament queue
+          const q = getTournamentSlotQueue(tournamentId, bracket, round, slot);
+          
+          // remove from normal queue just in case
+          waiting.delete(socket);
+          
+          // purge closed sockets from this tournament queue
+          for (const ws of q) if (ws.readyState !== WebSocket.OPEN)
+            q.delete(ws);
+          
+          if (q.has(socket))
+            return;
+          q.add(socket);
+          
+          send(socket, { type: "queue:joined" });
+          
+          if (q.size < 2)
+            return;
+            
+          const iter = q.values();
+          const p1 = iter.next().value as WebSocket;
+          const p2 = iter.next().value as WebSocket;
+          
+          if (p1.readyState !== WebSocket.OPEN || p2.readyState !== WebSocket.OPEN) {
+            q.delete(p1);
+            q.delete(p2);
+            return;
+          }
+          
+          q.delete(p1);
+          q.delete(p2);
+                
+          const p1UserId = socketToUserId.get(p1);
+          const p2UserId = socketToUserId.get(p2);
+          
+          if (!p1UserId || !p2UserId) {
+            send(p1, { type: "match:reconnect_denied", reason: "auth missing" });
+            send(p2, { type: "match:reconnect_denied", reason: "auth missing" });
+            return;
+          }
+          
+          if (p1UserId === p2UserId) {
+            q.add(p1);
+            send(p2, { type: "match:reconnect_denied", reason: "cannot match against yourself" });
+            q.delete(p2);
+            return;
+          }
+          
+          const key = slotKey(tournamentId, bracket, round, slot);
+          // If there is already a ROOM for this tournament slot, reuse it instead of making a new room.
+          
+          const existingRoomId = roomByTournamentSlot.get(key);
+          if (existingRoomId) {
+            const existingRoom = rooms.get(existingRoomId);
+            
+              if (existingRoom) {
+                // bind by userId (queue order may swap)
+                if (existingRoom.p1UserId === p1UserId)
+                  existingRoom.p1 = p1;
+                else if (existingRoom.p2UserId === p1UserId)
+                  existingRoom.p2 = p1;
+                if (existingRoom.p1UserId === p2UserId)
+                  existingRoom.p1 = p2;
+                else if (existingRoom.p2UserId === p2UserId)
+                  existingRoom.p2 = p2;
+                
+                const role1: Role = existingRoom.p1UserId === p1UserId ? "P1" : "P2";
+                const role2: Role = existingRoom.p1UserId === p2UserId ? "P1" : "P2";
+                
+                socketToMatch.set(p1, { matchId: existingRoomId, role: role1 });
+                socketToMatch.set(p2, { matchId: existingRoomId, role: role2 });
+                
+                send(p1, { type: "match:found", matchId: existingRoomId, youAre: role1 });
+                send(p2, { type: "match:found", matchId: existingRoomId, youAre: role2 });
+                
+                existingRoom.userPaused = false;
+                existingRoom.paused = true;
+                existingRoom.pauseMessage = "READY";
+                // cancel grace timers if they were running
+                if (existingRoom.disconnectCountdownInterval) {
+                  clearInterval(existingRoom.disconnectCountdownInterval);
+                  existingRoom.disconnectCountdownInterval = undefined;
+                }
+                if (existingRoom.p1DisconnectTimer) {
+                  clearTimeout(existingRoom.p1DisconnectTimer);
+                  existingRoom.p1DisconnectTimer = undefined;
+                }
+                if (existingRoom.p2DisconnectTimer) {
+                  clearTimeout(existingRoom.p2DisconnectTimer);
+                  existingRoom.p2DisconnectTimer = undefined;
+                }
+                existingRoom.disconnectDeadlineMs = undefined;
+                broadcastState(existingRoom);
+                
+                return;
+            }
+            else {
+                roomByTournamentSlot.delete(key);
+            }
+          }
+          
+          const matchId = crypto.randomUUID();
+          
+          send(p1, { type: "match:found", matchId, youAre: "P1" });
+          send(p2, { type: "match:found", matchId, youAre: "P2" });
+          
+          const startY = (HEIGHT - PADDLE_HEIGHT) / 2;
+          
+          // IMPORTANT: Create DB match with tournamentId
+          // round/bracket/slot: If you dont have bracket generation yet, 
+          // set them null for now and at least tournamentId will exist
+          // so DRAW rematch triggers
+          // 1) If this slot already has a FINISHED match, do NOT allow another match here.
+          const finished = await prisma.match.findFirst({
+            where: { tournamentId, bracket, round, slot, status: "FINISHED" },
+            select: { id: true },
+          });
+          
+          if (finished) {
+            send(p1, { type: "match:reconnect_denied", reason: "this match is already finished" });
+            send(p2, { type: "match:reconnect_denied", reason: "this match is already finished" });
+            return;
+          }
+          
+          // 2) If there's already an ONGOING match for this slot, reuse it (no duplicates).
+          const existing = await prisma.match.findFirst({
+            where: { tournamentId, bracket, round, slot, status: "ONGOING" },
+            select: { id: true, player1Id: true, player2Id: true },
+          });
+          
+          let matchDbId: number;
+          
+          if (existing) {
+            // must be same pair (either order)
+            const samePair =
+              (existing.player1Id === p1UserId && existing.player2Id === p2UserId) ||
+              (existing.player1Id === p2UserId && existing.player2Id === p1UserId);
+            
+            if (!samePair) {
+              send(p1, { type: "match:reconnect_denied", reason: "slot already assigned to other players" });
+              send(p2, { type: "match:reconnect_denied", reason: "slot already assigned to other players" });
+              return;
+            }
+            
+            matchDbId = existing.id;
+          }
+          else {
+            const created = await prisma.match.create({
+              data: {
+                status: "ONGOING",
+                player1Id: p1UserId,
+                player2Id: p2UserId,
+                tournamentId,
+                bracket,
+                round,
+                slot,
+              },
+              select: { id: true },
+            });
+            
+            matchDbId = created.id;
+          }
+          
+          const room: Room = {
+            p1,
+            p2,
+            p1UserId,
+            p2UserId,
+            tick: 0,
+            p1Up: false,
+            p1Down: false,
+            p2Up: false,
+            p2Down: false,
+            p1Y: startY,
+            p2Y: startY,
+            ball: { x: WIDTH / 2, y: HEIGHT / 2, vx: BALL_SPEED, vy: BALL_SPEED * 0.7 },
+            paused: false,
+            pauseMessage: "",
+            scoreP1: 0,
+            scoreP2: 0,
+            matchDbId,
+            startedAtMs: Date.now(),
+            
+            tournamentId,
+            bracket,
+            round,
+            slot,
+          };
+          
+          rooms.set(matchId, room);
+          roomByTournamentSlot.set(key, matchId);
+          socketToMatch.set(p1, { matchId, role: "P1" });
+          socketToMatch.set(p2, { matchId, role: "P2" });
+          
+          startGameLoop(room, matchId);
+          
+          // call the function to create matches after participants join
+          await generateTournamentMatches(tournamentId);
+          
+          return;
+        }   
+          
         case "queue:leave":
           removeFromQueue(socket);
           send(socket, { type: "queue:left" });
@@ -850,6 +1358,7 @@ export async function gameWs(app: FastifyInstance) {
         wsAlive.delete(socket);
         socketToUserId.delete(socket);
         removeFromQueue(socket);
+        removeFromAllTournamentSlotQueues(socket);
 
         const info = socketToMatch.get(socket);
         if (!info) {
