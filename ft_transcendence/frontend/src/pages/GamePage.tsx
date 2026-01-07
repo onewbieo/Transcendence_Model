@@ -86,7 +86,8 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
       let msg: ServerMsg | null = null;
       try {
         msg = JSON.parse(ev.data);
-      } catch {
+      }
+      catch {
         return;
       }
 

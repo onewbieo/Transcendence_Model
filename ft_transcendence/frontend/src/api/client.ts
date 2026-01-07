@@ -25,3 +25,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
   return data as T;
 }
+
+// frontend/src/api/client.ts (add this function)
+export async function tournamentBracket(tournamentId: number) {
+  return api(`/tournaments/${tournamentId}/bracket`);
+}

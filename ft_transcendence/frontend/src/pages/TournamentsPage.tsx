@@ -5,6 +5,7 @@ import {
   tournamentBracket,
   type TournamentBracket,
 } from "../api";
+import { getToken } from "../lib/auth";
 
 export default function TournamentsPage({ goHome }: { goHome: () => void }) {
   const [name, setName] = useState("Test Cup");
@@ -22,7 +23,8 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
       setCreated(t);
       setTid(t.id);
       setStatus(`Created ✅ (id=${t.id})`);
-    } catch (e: any) {
+    }
+    catch (e: any) {
       setStatus(`Create failed ❌ ${e?.message ?? ""}`);
     }
   }
@@ -31,10 +33,9 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
     setStatus("joining...");
     try {
       const res = await joinTournament(tid);
-      // backend might return {ok:true} OR {error:"already joined"}
-      // our api() throws on non-2xx, so if we reach here it's 2xx
       setStatus(`Join result ✅ ${JSON.stringify(res)}`);
-    } catch (e: any) {
+    }
+    catch (e: any) {
       setStatus(`Join failed ❌ ${e?.message ?? ""}`);
     }
   }
@@ -45,8 +46,55 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
       const b = await tournamentBracket(tid);
       setBracket(b);
       setStatus("Bracket loaded ✅");
-    } catch (e: any) {
+    }
+    catch (e: any) {
       setStatus(`Bracket failed ❌ ${e?.message ?? ""}`);
+    }
+  }
+  
+  async function onStart() {
+    setStatus("starting...");
+    try {
+      // Fetch the tournament data first to check its status
+      const tournament = await fetch(`http://localhost:3000/tournaments/${tid}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      }).then(res => res.json());
+      
+      console.log("Tournament status: ", tournament.status);
+      // Check if tournament is open before starting
+      if (tournament.status !== "OPEN") {
+        setStatus(`Tournament is not open ❌`);
+        return;
+      }
+
+      // Proceed to start the tournament if status is open
+      const res = await fetch(`http://localhost:3000/tournaments/${tid}/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({}) // Send empty body
+      });
+      
+      console.log("Start response status: ", res.status);
+
+      const result = await res.json();
+      if (res.status === 400) {
+        // Display error message if the backend returns a 400
+        setStatus(`Start failed ❌ ${result.error || "Unknown error"}`);
+      }
+      else {
+        // Otherwise, show success message
+        setStatus(`Tournament started ✅ (Matches generated)`);
+        console.log("Tournament result", result);
+      }
+    }
+    catch (e: any) {
+      setStatus(`Start failed ❌ ${e?.message ?? ""}`);
     }
   }
 
@@ -91,6 +139,7 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
         />
         <button onClick={onJoin}>Join</button>
         <button onClick={onLoadBracket}>Load bracket</button>
+        <button onClick={onStart}>Start Tournament</button>
       </div>
 
       {bracket && (
@@ -121,9 +170,28 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
 
           <h3 style={{ marginTop: 18 }}>Matches</h3>
           {bracket.matches?.length ? (
-            <pre style={{ marginTop: 8, padding: 12, background: "#111", color: "#eee" }}>
-              {JSON.stringify(bracket.matches, null, 2)}
-            </pre>
+            <table style={{ width: "100%", marginTop: 8, borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th>Match</th>
+                  <th>Status</th>
+                  <th>Player 1</th>
+                  <th>Player 2</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bracket.matches.map((match, idx) => (
+                  <tr key={idx} style={{ borderTop: "1px solid #333" }}>
+                    <td>Match {match.id}</td>
+                    <td>{match.status}</td>
+                    <td>{match.player1.name}</td>
+                    <td>{match.player2.name}</td>
+                    <td>{match.player1Score} - {match.player2Score}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
             <p>No matches generated yet.</p>
           )}
@@ -132,3 +200,4 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
     </div>
   );
 }
+

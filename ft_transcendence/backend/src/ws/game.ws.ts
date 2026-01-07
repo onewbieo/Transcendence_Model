@@ -367,7 +367,7 @@ function cleanupMatch(matchId : string) {
     socketToMatch.delete(room.p2);
 }
 
-function broadcastState(room :Room) {
+export function broadcastState(room :Room) {
   const payload: ServerMsg = {
     type: "game:state",
     tick: room.tick,
@@ -662,13 +662,14 @@ function getTournamentSlotQueue(tournamentId: number, bracket: Bracket, round: n
   return q;
 }
 
-function startGameLoop(room: Room, matchId: string) {
+export function startGameLoop(room: Room, matchId: string) {
   // serve: start moving toward P2 initially (like your client)
   resetBall(room, 1);
 
   // 60 fps-ish loop
   room.interval = setInterval(() => {
-    if (room.isEnding) return;
+    if (room.isEnding)
+      return;
 
     room.tick += 1;
 

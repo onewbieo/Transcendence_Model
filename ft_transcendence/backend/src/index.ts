@@ -70,7 +70,7 @@ async function main() {
   
   app.get("/", async () => ({
   	ok: true,
-  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id", "/tournaments", "/tournaments/:id/join", "/tournaments/:id/bracket",],
+  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id", "/tournaments", "/tournaments/id", "/tournaments/:id/join", "/tournaments/:id/bracket",],
   }));
   
   await app.listen({ host: "0.0.0.0", port: 3000 });
