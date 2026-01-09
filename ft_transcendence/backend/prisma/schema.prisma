@@ -107,5 +107,3 @@ model TournamentParticipant {
   @@index([tournamentId])
   @@index([userId])
 }
-  
-

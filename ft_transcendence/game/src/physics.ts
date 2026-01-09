@@ -42,7 +42,7 @@ export const serveBallWithDelay = (
 	width: number,
 	height: number,
 	direction: 1 | -1,
-	onPause: (msg: string) => void,
+	onPause: (msg: string) => void,   // function onPause(msg: string): void 
 	onResume: () => void,
 	isPaused?: () => boolean,
 	delayMs: number = SERVE_DELAY_MS

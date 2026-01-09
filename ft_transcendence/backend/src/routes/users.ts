@@ -239,24 +239,26 @@ export async function userRoutes(app: FastifyInstance) {
     "/admin/users/:id",
     { preHandler: (app as any).authorizeAdmin }, 
     async (req, reply) => {
-    const params = req.params as { id: string };
-    const id = Number(params.id);
+      const params = req.params as { id: string };
+      const id = Number(params.id);
     
-    if (!Number.isFinite(id)) {
-      return reply.code(400).send({ error: "invalid id" });
-    }
-    
-    try {
-      await prisma.user.delete({ where: { id} });
-      return reply.code(204).send();
-    }
-    catch (err: any) {
-      if (err?.code === "P2025") {
-        return reply.code(404).send({ error: "user not found" });
+      if (!Number.isFinite(id)) {
+        return reply.code(400).send({ error: "invalid id" });
       }
-      req.log.error(err);
-      return reply.code(500).send({ error: "internal error" });
-    }
+    
+      try {
+        await prisma.user.delete({
+          where: { id }
+        });
+        return reply.code(204).send();
+      }
+      catch (err: any) {
+        if (err?.code === "P2025") {
+          return reply.code(404).send({ error: "user not found" });
+        }
+        req.log.error(err);
+        return reply.code(500).send({ error: "internal error" });
+      }
     }
   );
 }

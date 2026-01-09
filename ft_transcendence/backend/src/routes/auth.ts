@@ -35,9 +35,9 @@ export async function authRoutes(app: FastifyInstance) {
     });
     
     const token = app.jwt.sign({
-    sub: user.id,
-    email: user.email,
-    role: user.role,
+      sub: user.id,
+      email: user.email,
+      role: user.role,
     } satisfies JwtPayload);
     
     return reply.code(201).send({ user, token });
@@ -62,9 +62,9 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: "invalid credentials" });
       
     const token = app.jwt.sign({
-    sub: user.id,
-    email: user.email,
-    role: user.role,
+      sub: user.id,
+      email: user.email,
+      role: user.role,
     } satisfies JwtPayload);
     
     return reply.send({

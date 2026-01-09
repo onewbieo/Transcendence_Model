@@ -3,7 +3,6 @@ import WebSocket from "ws";
 import crypto from "node:crypto";
 import { prisma } from "../prisma.js";
 import { Bracket } from "@prisma/client";
-import { generateTournamentMatches } from "../services/tournamentService";
 
 type Role = "P1" | "P2";
 
@@ -44,7 +43,7 @@ type ClientMsg =
        bracket: Bracket;
        round: number;
        slot: number;
-     };
+    };
     
 
 type ServerMsg =
@@ -135,11 +134,11 @@ const waitingByTournamentSlot = new Map<string, Set<WebSocket>>();
 // tournament slot -> roomId (your in memory matchId UUID)
 const roomByTournamentSlot = new Map<string, string>();
 
-function slotKey(tournamentId: number, bracket: Bracket, round: number, slot: number) {
+function slotKey(tournamentId: number, bracket: Bracket, round: number, slot: number) { // generate a sring of data for tournamentId:bracket:round:slot
   return `${tournamentId}:${bracket}:${round}:${slot}`;
 } 
 
-setInterval(() => {
+setInterval(() => { // monitoring the health of webSockets
   for (const [ws, alive] of wsAlive) {
     if (!ws) {
       wsAlive.delete(ws as any);
@@ -434,7 +433,8 @@ async function tryAdvanceTournamentAfterWin(params: {
     select: { id: true },
   });
 
-  if (existingNext) return;
+  if (existingNext)
+    return;
 
   // Create next round match
   await prisma.match.create({
@@ -675,10 +675,14 @@ export function startGameLoop(room: Room, matchId: string) {
 
     if (!room.paused) {
       // apply paddle movement from input flags
-      if (room.p1Up) room.p1Y -= PADDLE_SPEED;
-      if (room.p1Down) room.p1Y += PADDLE_SPEED;
-      if (room.p2Up) room.p2Y -= PADDLE_SPEED;
-      if (room.p2Down) room.p2Y += PADDLE_SPEED;
+      if (room.p1Up)
+        room.p1Y -= PADDLE_SPEED;
+      if (room.p1Down)
+        room.p1Y += PADDLE_SPEED;
+      if (room.p2Up)
+        room.p2Y -= PADDLE_SPEED;
+      if (room.p2Down)
+        room.p2Y += PADDLE_SPEED;
 
       room.p1Y = clamp(room.p1Y, 0, HEIGHT - PADDLE_HEIGHT);
       room.p2Y = clamp(room.p2Y, 0, HEIGHT - PADDLE_HEIGHT);
@@ -1069,7 +1073,7 @@ export async function gameWs(app: FastifyInstance) {
             return;
           
           // optional: ensure tournament exists + ONGOING
-          const tournament = await prisma.tournament.findunique({
+          const tournament = await prisma.tournament.findUnique({
             where: { id: tournamentId },
             select: { id: true, status: true },
           });
@@ -1279,9 +1283,6 @@ export async function gameWs(app: FastifyInstance) {
           socketToMatch.set(p2, { matchId, role: "P2" });
           
           startGameLoop(room, matchId);
-          
-          // call the function to create matches after participants join
-          await generateTournamentMatches(tournamentId);
           
           return;
         }   

@@ -189,11 +189,13 @@ export async function matchRoutes(app: FastifyInstance) {
     { preHandler: (app as any).authenticate },
     async (req: any, reply) => {
       const meId = Number(req.user?.sub);
-      if (!Number.isFinite(meId)) return reply.code(401).send({ error: "unauthorized" });
+      if (!Number.isFinite(meId))
+        return reply.code(401).send({ error: "unauthorized" });
 
       const params = req.params as { id: string };
       const id = Number(params.id);
-      if (!Number.isFinite(id)) return reply.code(400).send({ error: "invalid id" });
+      if (!Number.isFinite(id))
+        return reply.code(400).send({ error: "invalid id" });
 
       const match = await prisma.match.findUnique({
         where: { id },
@@ -210,10 +212,12 @@ export async function matchRoutes(app: FastifyInstance) {
         },
       });
 
-      if (!match) return reply.code(404).send({ error: "match not found" });
+      if (!match)
+        return reply.code(404).send({ error: "match not found" });
 
       const allowed = match.player1Id === meId || match.player2Id === meId;
-      if (!allowed) return reply.code(403).send({ error: "forbidden" });
+      if (!allowed)
+        return reply.code(403).send({ error: "forbidden" });
 
       return reply.send(match);
     }

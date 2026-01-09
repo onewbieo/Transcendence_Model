@@ -74,12 +74,23 @@ export async function createTournament(name: string): Promise<Tournament> {
   });
 }
 
-export async function joinTournament(id: number): Promise<{ ok: true } | { error: string }> {
+export async function getTournament(id: number): Promise<Tournament> {
+  return api(`/tournaments/${id}`);
+}
+
+export async function joinTournament(id: number): Promise<{ ok: true }> {
   return api(`/tournaments/${id}/join`, {
-    method: "POST",
+    method: "POST" 
   });
 }
 
 export async function tournamentBracket(id: number): Promise<TournamentBracket> {
   return api(`/tournaments/${id}/bracket`);
+}
+
+export async function startTournament(id: number): Promise<{ message: string }> {
+  return api(`/tournaments/${id}/start`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
 }

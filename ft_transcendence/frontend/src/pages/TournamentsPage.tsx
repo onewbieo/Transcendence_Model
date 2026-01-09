@@ -1,11 +1,12 @@
 import { useState } from "react";
 import {
   createTournament,
+  getTournament,
   joinTournament,
   tournamentBracket,
+  startTournament,
   type TournamentBracket,
 } from "../api";
-import { getToken } from "../lib/auth";
 
 export default function TournamentsPage({ goHome }: { goHome: () => void }) {
   const [name, setName] = useState("Test Cup");
@@ -55,46 +56,24 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
   async function onStart() {
     setStatus("starting...");
     try {
-      // Fetch the tournament data first to check its status
-      const tournament = await fetch(`http://localhost:3000/tournaments/${tid}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${getToken()}`,
-        },
-      }).then(res => res.json());
+      const t = await getTournament(tid);
       
-      console.log("Tournament status: ", tournament.status);
-      // Check if tournament is open before starting
-      if (tournament.status !== "OPEN") {
-        setStatus(`Tournament is not open ❌`);
+      console.log("Tournament status:", t.status);
+      
+      if (t.status !== "OPEN") {
+        setStatus("Tournament is not open ❌");
         return;
       }
-
-      // Proceed to start the tournament if status is open
-      const res = await fetch(`http://localhost:3000/tournaments/${tid}/start`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({}) // Send empty body
-      });
       
-      console.log("Start response status: ", res.status);
-
-      const result = await res.json();
-      if (res.status === 400) {
-        // Display error message if the backend returns a 400
-        setStatus(`Start failed ❌ ${result.error || "Unknown error"}`);
-      }
-      else {
-        // Otherwise, show success message
-        setStatus(`Tournament started ✅ (Matches generated)`);
-        console.log("Tournament result", result);
-      }
+      const res = await startTournament(tid);
+      setStatus(`Tournament started ✅ ${res.message}`);
+      
+      const b = await tournamentBracket(tid);
+      setBracket(b);
     }
     catch (e: any) {
-      setStatus(`Start failed ❌ ${e?.message ?? ""}`);
+      // api() throws Error(msg) where msg comes from backend {error} / {message}
+      setStatus(`Start failed ❌ ${e?.message ?? "Unknown error"}`);
     }
   }
 

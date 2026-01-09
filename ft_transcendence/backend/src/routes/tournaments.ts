@@ -114,14 +114,17 @@ export async function tournamentRoutes(app: FastifyInstance) {
         // Unique constraint = already joined
         if (err?.code === "P2002") {
           return reply.code(409).send({ error: "already joined" });
-         }
-         throw err;
+        }
+        throw err;
       }
     }
   );
   
-  // GET /tournaments/:id - Get tournament by ID (make sure this is outside the tournamentRoutes function)
-  app.get("/tournaments/:id", async (req, reply) => {
+  // GET /tournaments/:id - Get tournament by ID
+  app.get(
+    "/tournaments/:id",
+    { preHandler: (app as any).authenticate },
+    async (req, reply) => {
     const tournamentId = Number(req.params.id);
 
     if (!Number.isFinite(tournamentId)) {
@@ -146,7 +149,10 @@ export async function tournamentRoutes(app: FastifyInstance) {
   });
 
   // GET /tournaments/:id/bracket (public or protected - your choice)
-  app.get("/tournaments/:id/bracket", async (req,reply) => {
+  app.get(
+    "/tournaments/:id/bracket",
+    { preHandler: (app as any).authenticate },
+    async (req,reply) => {
     const tournamentId = Number(req.params.id);
     
     if (!Number.isFinite(tournamentId)) {
@@ -196,7 +202,5 @@ export async function tournamentRoutes(app: FastifyInstance) {
     }
     
     return reply.send(tournament);
-  });
-  
-  
+  });  
 }

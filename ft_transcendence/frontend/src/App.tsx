@@ -12,7 +12,8 @@ export default function App() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  if (!hasToken) return <LoginPage onLoggedIn={() => setHasToken(true)} />;
+  if (!hasToken)
+    return <LoginPage onLoggedIn={() => setHasToken(true)} />;
 
   return <HomePage onLogout={() => setHasToken(false)} />;
 }

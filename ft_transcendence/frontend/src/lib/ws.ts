@@ -8,6 +8,7 @@ export function makeWsUrl(path: string) {
   // example -> ws://localhost:5173/ws/game?token=...
   const url = new URL(`${proto}://${window.location.host}${base}${path}`);
 
-  if (token) url.searchParams.set("token", token);
+  if (token)
+    url.searchParams.set("token", token);
   return url.toString();
 }
