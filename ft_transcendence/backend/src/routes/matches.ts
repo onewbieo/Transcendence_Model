@@ -21,14 +21,18 @@ export async function matchRoutes(app: FastifyInstance) {
         status?: "FINISHED" | "DRAW";
         winnerId?: number | null;
         durationMs?: number;
+        tournamentId?: number;
+        round?: number;
+        bracket?: "WINNERS" | "LOSERS";
+        slot?: number;
       };
-
+      
       const player1Id = body.player1Id;
       const player2Id = body.player2Id;
       const player1Score = body.player1Score;
       const player2Score = body.player2Score;
       const status = body.status ?? "FINISHED";
-
+      
       // Basic validation
       if (
         !Number.isFinite(player1Id) ||
@@ -40,69 +44,116 @@ export async function matchRoutes(app: FastifyInstance) {
           error: "player1Id, player2Id, player1Score, player2Score are required numbers",
         });
       }
-
-      if (player1Id === player2Id) {
-        return reply.code(400).send({ error: "player1Id and player2Id must be different" });
-      }
-
-      if (player1Score < 0 || player2Score < 0) {
-        return reply.code(400).send({ error: "scores cannot be negative" });
-      }
-
-      if (status !== "FINISHED" && status !== "DRAW") {
-        return reply.code(400).send({ error: "status must be FINISHED or DRAW" });
-      }
-
-      // IMPORTANT security rule (simple MVP):
-      // only allow the logged-in user to submit matches that include themselves
-      const meId = Number(req.user?.sub);
-      if (!Number.isFinite(meId)) {
-        return reply.code(401).send({ error: "unauthorized" });
-      }
-
-      if (meId !== player1Id && meId !== player2Id) {
-        return reply.code(403).send({ error: "you can only create matches that include yourself" });
-      }
-
-      // Decide winner (project semantics)
-      // -FINISHED: must have a winnerId (disconnect win OR score win)
-      // -DRAW: winnerId must be null
-      let winnerId: number | null = null;
       
-      if (status === "DRAW") {
-        // draw can be at ANY score if both disconnected
-        winnerId = null;
+      // Tournament-aware behavior
+      const tournamentId = body.tournamentId;
+      const round = body.round;
+      const bracket = body.bracket;
+      const slot = body.slot;
+      
+      const isTournamentMatch =
+        Number.isFinite(tournamentId) &&
+        Number.isFinite(round) &&
+        (bracket === "WINNERS" || bracket === "LOSERS") &&
+        Number.isFinite(slot);
+      
+      if (isTournamentMatch) {
+        // Find the latest ONGOING attempt for that bracket slot
+        const current = await prisma.match.findFirst({
+          where: {
+            tournamentId: tournamentId as number,
+            round: round as number,
+            bracket: bracket as any,
+            slot: slot as number,
+            status: "ONGOING",
+          },
+          orderBy: { id: "desc" },
+        });
         
-        // optional strictness: if client sends winnerId for DRAW -> reject
-        if (body.winnerId !== undefined && body.winnerId !== null) {
-          return reply.code(400).send({ error: "DRAW must have winnerId=null" });
+        if (!current) {
+          return reply.code(404).send({
+            error: "no ONGOING tournament match found for this bracket slot",
+          });
         }
-      }
-      else {
-        // FINISHED: winner must be explicit (do NOT infer from score)
-        const w = body.winnerId;
+      
+        // Safety: ensure submitted players match the current match players
+        const okPlayers = 
+          (current.player1Id === player1Id && current.player2Id === player2Id) ||
+          (current.player1Id === player2Id && current.player2Id === player1Id);
         
-        if (!Number.isFinite(w)) {
-          return reply.code(400).send({ error: "FINISHED requires winnerId" });
+        if (!okPlayers) {
+          return reply.code(400).send({ error: "players do not match the current tournament match" });
         }
+
+        // update current attempt with the result
+        const updated = await prisma.match.update({
+          where: { id: current.id },
+          data: {
+            status,
+            player1Score,
+            player2Score,
+            winnerId,
+            durationMs: Number.isFinite(body.durationMs) ? body.durationMs : null,
+          },
+          select: {
+            id: true,
+            createdAt: true,
+            status: true,
+            player1Id: true,
+            player2Id: true,
+            player1Score: true,
+            player2Score: true,
+            winnerId: true,
+            durationMs: true,
+            tournamentId: true,
+            round: true,
+            bracket: true,
+            slot: true,
+          },
+        });
+      
+        if (status === "DRAW") {
+          const rematch = await prisma.match.create({
+            data: {
+              status: "ONGOING",
+              player1Id: current.player1Id,
+              player2Id: current.player2Id,
+              player1Score: 0,
+              player2Score: 0,
+              winnerId: null,
+              durationMs: null,
+              tournamentId: tournamentId as number,
+              round: round as number,
+              bracket: bracket as any,
+              slot: slot as number,
+            },
+            select: {
+              id: true,
+              status: true,
+              tournamentId: true,
+              round: true,
+              bracket: true,
+              slot: true,
+            },
+          });
         
-        if (w !== player1Id && w !== player2Id) {
-          return reply.code(400).send({ error: "winnerId must be player1Id or player2Id" });
+          return reply.code(200).send({
+            ok: true,
+            result: updated,
+            rematch,
+            message: "DRAW saved; rematch created",
+          });
         }
-        
-        winnerId = w as number;
+      
+        return reply.code(200).send({
+          ok: true,
+          result: updated,
+          message: "Tournament match result saved",
+        });
       }
-
-      // Optional: ensure users exist (nice error instead of FK crash)
-      const [p1, p2] = await Promise.all([
-        prisma.user.findUnique({ where: { id: player1Id } }),
-        prisma.user.findUnique({ where: { id: player2Id } }),
-      ]);
-
-      if (!p1 || !p2) {
-        return reply.code(400).send({ error: "player1Id or player2Id does not exist" });
-      }
-
+      
+      // Handle non-tournament match creation (regular match creation here)
+      const winnerId = status === "DRAW" ? null : body.winnerId;
       const match = await prisma.match.create({
         data: {
           status,
@@ -125,7 +176,7 @@ export async function matchRoutes(app: FastifyInstance) {
           durationMs: true,
         },
       });
-
+      
       return reply.code(201).send(match);
     }
   );
