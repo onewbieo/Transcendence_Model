@@ -8,17 +8,24 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
 
   const token = getToken();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (token)
+    headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`/api${path}`, { ...options, headers });
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  }
+  catch {
+    data = text;
+  }
 
   if (!res.ok) {
     const msg =
       (data && (data.error || data.message)) ||
-      text ||
+      (typeof data === "string" ? data : "") ||
       `${res.status} ${res.statusText}`;
     throw new Error(msg);
   }

@@ -25,7 +25,8 @@ export const resetBall = (ball, width, height, direction) => {
     ball.vy = Math.sin(angle) * BALL_SPEED;
 };
 let serveTimer = null;
-export const serveBallWithDelay = (ball, width, height, direction, onPause, onResume, isPaused, delayMs = SERVE_DELAY_MS) => {
+export const serveBallWithDelay = (ball, width, height, direction, onPause, // function onPause(msg: string): void 
+onResume, isPaused, delayMs = SERVE_DELAY_MS) => {
     onPause(direction === 1 ? "RIGHT SERVES" : "LEFT SERVES");
     // freeze ball + center it during the countdown
     ball.x = width / 2;

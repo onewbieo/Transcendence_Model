@@ -25,6 +25,7 @@ type ServerMsg =
 type ClientMsg =
   | { type: "ping" }
   | { type: "queue:join" }
+  | { type: "tournament:join"; tournamentId: number; bracket: "WINNERS" | "LOSERS"; round:number; slot: number }
   | { type: "queue:leave" }
   | { type: "game:input"; dir: "up" | "down"; pressed: boolean }
   | { type: "game:pause"; paused: boolean }
@@ -42,6 +43,12 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
   const [role, setRole] = useState<Role | "-">("-");
   const [log, setLog] = useState<string[]>([]);
   const [state, setState] = useState<Extract<ServerMsg, { type: "game:state" }> | null>(null);
+  
+  const stateRef = useRef<Extract<ServerMsg, { type: "game:state" }> | null>(null);
+  
+  useEffect(() => {
+    stateRef.current = state;
+  }, []);
 
   const wsUrl = useMemo(() => makeWsUrl("/game"), []);
 
@@ -67,9 +74,28 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // Try read tournament params from query string
+      const qs = new URLSearchParams(window.location.search);
+      
+      const tournamentId = Number(qs.get("tournamentId"));
+      const bracket = (qs.get("bracket") ?? "WINNERS") as "WINNERS" | "LOSERS";
+      const round = Number(qs.get("round"));
+      const slot = Number(qs.get("slot"));
+      
+      const isTournament =
+        Number.isFinite(tournamentId) && tournamentId > 0 &&
+        Number.isFinite(round) && round > 0 &&
+        Number.isFinite(slot) && slot > 0;
+        
+      if (isTournament) {
+        pushLog(`tournament join → t=${tournamentId} ${bracket} r=${round} s=${slot}`);
+        send({ type: "tournament:join", tournamentId, bracket, round, slot });
+      }
+      else {
+        send({ type: "match:reconnect" }); // optional auto-reconnect
+      }
       setWsStatus("open");
       pushLog("WS open ✅");
-      send({ type: "match:reconnect" }); // optional auto-reconnect
     };
 
     ws.onclose = () => {
@@ -134,24 +160,30 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
+  
   // keyboard controls
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.repeat) return;
+      if (e.repeat)
+        return;
 
-      if (e.key === "w" || e.key === "ArrowUp") send({ type: "game:input", dir: "up", pressed: true });
-      if (e.key === "s" || e.key === "ArrowDown") send({ type: "game:input", dir: "down", pressed: true });
+      if (e.key === "w" || e.key === "ArrowUp")
+        send({ type: "game:input", dir: "up", pressed: true });
+      if (e.key === "s" || e.key === "ArrowDown")
+        send({ type: "game:input", dir: "down", pressed: true });
 
       if (e.key === "p" || e.key === "P") {
-        const paused = !(state?.paused ?? false);
+        const cur = stateRef.current;
+        const paused = !(cur?.paused ?? false);
         send({ type: "game:pause", paused });
       }
     }
 
     function onKeyUp(e: KeyboardEvent) {
-      if (e.key === "w" || e.key === "ArrowUp") send({ type: "game:input", dir: "up", pressed: false });
-      if (e.key === "s" || e.key === "ArrowDown") send({ type: "game:input", dir: "down", pressed: false });
+      if (e.key === "w" || e.key === "ArrowUp")
+        send({ type: "game:input", dir: "up", pressed: false });
+      if (e.key === "s" || e.key === "ArrowDown")
+        send({ type: "game:input", dir: "down", pressed: false });
     }
 
     window.addEventListener("keydown", onKeyDown);

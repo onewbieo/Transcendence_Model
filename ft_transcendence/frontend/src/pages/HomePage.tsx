@@ -15,24 +15,52 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("home");
   const [meUser, setMeUser] = useState<MeUser | null>(null);
   const [status, setStatus] = useState("loading...");
+  
+  useEffect(() => {
+    const path = window.location.pathname;
+
+    if (path === "/game") {
+      setTab("game");
+    }
+    else if (path === "/tournaments") {
+      setTab("tournaments");
+    }
+    else if (path === "/lobby") {
+      setTab("lobby");
+    }
+  }, []);
 
   async function refreshMe() {
     const data = await me();
     setMeUser(data.me);
     return data.me;
   }
-
+  
   useEffect(() => {
     refreshMe()
       .then(() => setStatus("ok ✅"))
       .catch((e: any) => {
-        setStatus(`failed ❌ ${e?.message ?? ""}`);
-        clearToken();
-        onLogout();
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+        console.error("me() failed:", e);
+        
+        const msg = String(e?.message ?? "");
 
+        // ⛔ ONLY logout on auth failure
+        if (
+          msg.includes("401") ||
+          msg.includes("Unauthorized") ||
+          msg.includes("Forbidden")
+        ) {
+          setStatus("session expired ❌");
+          clearToken();
+          onLogout();
+          return;
+        }
+
+        // ✅ Otherwise, stay logged in
+        setStatus("backend error ⚠️ (still logged in)");
+      });
+  }, []);
+  
   if (tab === "profile") {
     return (
       <ProfilePage
@@ -59,11 +87,10 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
     return <LobbyPage goHome={() => setTab("home")} />;
   }
   
-  if (tab == "game") {
+  if (tab === "game") {
     return <GamePage goHome={() => setTab("home")} />;
   }
 
-  // tab === "home"
   return (
     <div style={{ maxWidth: 720, margin: "48px auto", padding: 24 }}>
       <h1>ft_transcendence</h1>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   createTournament,
   getTournament,
@@ -15,7 +15,45 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
   const [status, setStatus] = useState("");
   const [created, setCreated] = useState<any>(null);
   const [bracket, setBracket] = useState<TournamentBracket | null>(null);
+  
+  useEffect(() => {
+    if (!tid)
+      return;
 
+    console.log("Polling tournament status for tid:", tid);
+
+    const interval = setInterval(async () => {
+      try {
+        const t = await getTournament(tid);
+        console.log("Polled tournament status:", t.status);
+
+        // ✅ THIS IS THE KEY CONDITION
+        if (t.status === "ONGOING") {
+          const params = new URLSearchParams({
+            tournamentId: String(tid),
+            bracket: "WINNERS",
+            round: "1",
+            slot: "1",
+          });
+
+          const gameUrl = `/game?${params.toString()}`;
+
+          console.log("Tournament started → redirecting to:", gameUrl);
+
+          // prevent infinite reload
+          if (window.location.pathname !== "/game") {
+            window.location.href = gameUrl;
+          }
+        }
+      }
+      catch (e) {
+      console.error("Tournament poll error:", e);
+      }
+    }, 2000); // every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [tid]);
+  
   async function onCreate() {
     setStatus("creating...");
     setBracket(null);
@@ -54,6 +92,9 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
   }
   
   async function onStart() {
+    console.log("=== START TOURNAMENT CLICKED ===");
+    console.log("Current URL:", window.location.href);
+    console.log("Tournament ID:", tid);
     setStatus("starting...");
     try {
       const t = await getTournament(tid);
@@ -67,6 +108,18 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
       
       const res = await startTournament(tid);
       setStatus(`Tournament started ✅ ${res.message}`);
+      
+      console.log("StartTournament API done");
+      
+      const params = new URLSearchParams({
+        tournamentId: String(tid),
+        bracket: "WINNERS",
+        round: "1",
+        slot: "1",
+      });
+      
+      const gameUrl = `/game?${params.toString()}`;
+      console.log("Redirecting to:", gameUrl);
       
       const b = await tournamentBracket(tid);
       setBracket(b);
