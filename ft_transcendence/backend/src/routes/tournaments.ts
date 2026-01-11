@@ -81,6 +81,22 @@ export async function tournamentRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "invalid tournament id" });
       }
       
+      // Check if the user is already part of another active tournament
+      const existingTournament = await prisma.tournamentParticipant.findFirst({
+        where: {
+          userId,
+          tournament: {
+            status: { in: ["OPEN", "ONGOING"] }
+          }
+        }
+      });
+      
+      if (existingTournament) {
+        return reply.code(400).send({
+          error: "You are already registered in another active tournament."
+        });
+      } 
+      
       const tournament = await prisma.tournament.findUnique({
         where: { id:tournamentId },
         select: { id: true, status: true },

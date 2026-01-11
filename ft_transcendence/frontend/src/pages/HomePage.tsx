@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { me } from "../api";
 import { clearToken } from "../lib/auth";
 import ProfilePage from "./ProfilePage";
@@ -9,27 +10,13 @@ import LobbyPage from "./LobbyPage";
 import GamePage from "./GamePage";
 
 type MeUser = { id: number; email: string; name: string | null; role: string; createdAt: string };
-type Tab = "home" | "profile" | "matches" | "leaderboard" | "tournaments" | "lobby" | "game";
 
 export default function HomePage({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<Tab>("home");
   const [meUser, setMeUser] = useState<MeUser | null>(null);
   const [status, setStatus] = useState("loading...");
+  const navigate = useNavigate(); // Hook to navigate to different routes
   
-  useEffect(() => {
-    const path = window.location.pathname;
-
-    if (path === "/game") {
-      setTab("game");
-    }
-    else if (path === "/tournaments") {
-      setTab("tournaments");
-    }
-    else if (path === "/lobby") {
-      setTab("lobby");
-    }
-  }, []);
-
+  // Refresh user info on mount
   async function refreshMe() {
     const data = await me();
     setMeUser(data.me);
@@ -61,36 +48,13 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
       });
   }, []);
   
-  if (tab === "profile") {
-    return (
-      <ProfilePage
-        meUser={meUser}
-        refreshMe={refreshMe}
-        goHome={() => setTab("home")}
-      />
-    );
-  }
+  const goToProfile = () => navigate("/profile");
+  const goToMatches = () => navigate("/matches");
+  const goToLeaderboard = () => navigate("/leaderboard");
+  const goToTournaments = () => navigate("/tournaments");
+  const goToLobby = () => navigate("/lobby");
+  const goToGame = () => navigate("/game");
   
-  if (tab === "matches") {
-    return <MatchesPage goHome={() => setTab("home")} />;
-  }
-  
-  if (tab === "leaderboard") {
-    return <LeaderboardPage goHome={() => setTab("home")} />;
-  }
-  
-  if (tab === "tournaments") {
-    return <TournamentsPage goHome={() => setTab("home")} />;
-  }
-  
-  if (tab === "lobby") {
-    return <LobbyPage goHome={() => setTab("home")} />;
-  }
-  
-  if (tab === "game") {
-    return <GamePage goHome={() => setTab("home")} />;
-  }
-
   return (
     <div style={{ maxWidth: 720, margin: "48px auto", padding: 24 }}>
       <h1>ft_transcendence</h1>
@@ -101,12 +65,13 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
       </p>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={() => setTab("profile")}>Profile</button>
-        <button onClick={() => setTab("matches")}>Matches</button>
-        <button onClick={() => setTab("leaderboard")}>Leaderboard</button>
-        <button onClick={() => setTab("tournaments")}>Tournaments</button>
-        <button onClick={() => setTab("lobby")}>Lobby</button>
-        <button onClick={() => setTab("game")}>Game</button>
+        {/* Use navigate for routing */}
+        <button onClick={goToProfile}>Profile</button>
+        <button onClick={goToMatches}>Matches</button>
+        <button onClick={goToLeaderboard}>Leaderboard</button>
+        <button onClick={goToTournaments}>Tournaments</button>
+        <button onClick={goToLobby}>Lobby</button>
+        <button onClick={goToGame}>Game</button>
         <button
           onClick={() => {
             clearToken();
@@ -124,3 +89,5 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
     </div>
   );
 }
+  
+  

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { getToken } from "../lib/auth";
 
 type Role = "P1" | "P2";
@@ -21,6 +22,9 @@ export default function LobbyPage({ goHome }: { goHome: () => void }) {
   const wsRef = useRef<WebSocket | null>(null);
 
   const token = useMemo(() => getToken(), []);
+  
+  // use navigate for routing
+  const navigate = useNavigate();
 
   function push(line: string) {
     setLog((prev) => [line, ...prev].slice(0, 50));
@@ -99,8 +103,7 @@ export default function LobbyPage({ goHome }: { goHome: () => void }) {
       <p>Status: {status}</p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <button onClick={goHome}>Back to Home</button>
-
+        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */} 
         <button onClick={() => send({ type: "queue:join" })}>Queue: Join</button>
         <button onClick={() => send({ type: "queue:leave" })}>Queue: Leave</button>
         <button onClick={() => send({ type: "match:reconnect" })}>Reconnect</button>

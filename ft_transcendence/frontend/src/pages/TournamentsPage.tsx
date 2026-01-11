@@ -7,14 +7,17 @@ import {
   startTournament,
   type TournamentBracket,
 } from "../api";
+import { useNavigate } from "react-router-dom"; // useNavigate for navigation
 
-export default function TournamentsPage({ goHome }: { goHome: () => void }) {
+export default function TournamentsPage() {
   const [name, setName] = useState("Test Cup");
   const [tid, setTid] = useState<number>(1);
 
   const [status, setStatus] = useState("");
   const [created, setCreated] = useState<any>(null);
   const [bracket, setBracket] = useState<TournamentBracket | null>(null);
+  
+  const navigate = useNavigate(); // hook for navigation
   
   useEffect(() => {
     if (!tid)
@@ -42,7 +45,7 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
 
           // prevent infinite reload
           if (window.location.pathname !== "/game") {
-            window.location.href = gameUrl;
+            navigate(gameUrl);
           }
         }
       }
@@ -52,7 +55,7 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
     }, 2000); // every 2 seconds
 
     return () => clearInterval(interval);
-  }, [tid]);
+  }, [tid, navigate]);
   
   async function onCreate() {
     setStatus("creating...");
@@ -123,6 +126,8 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
       
       const b = await tournamentBracket(tid);
       setBracket(b);
+      
+      navigate(gameUrl);
     }
     catch (e: any) {
       // api() throws Error(msg) where msg comes from backend {error} / {message}
@@ -135,7 +140,7 @@ export default function TournamentsPage({ goHome }: { goHome: () => void }) {
       <h1>Tournaments</h1>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={goHome}>Back to Home</button>
+        <button onClick={() => navigate("/")}>Back to Home</button>
       </div>
 
       <p style={{ marginTop: 12 }}>{status}</p>

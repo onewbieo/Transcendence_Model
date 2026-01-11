@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { makeWsUrl } from "../lib/ws";
 
 type Role = "P1" | "P2";
@@ -37,6 +38,7 @@ const HEIGHT = 600;
 export default function GamePage({ goHome }: { goHome: () => void }) {
   const wsRef = useRef<WebSocket | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const navigate = useNavigate(); // use navigate for page redirection
 
   const [wsStatus, setWsStatus] = useState<"closed" | "open" | "error" | "connecting">("closed");
   const [matchId, setMatchId] = useState<string>("-");
@@ -48,7 +50,7 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
   
   useEffect(() => {
     stateRef.current = state;
-  }, []);
+  }, [state]);
 
   const wsUrl = useMemo(() => makeWsUrl("/game"), []);
 
@@ -145,6 +147,9 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
         });
 
         pushLog(`GAME OVER winner=${msg.winner} score=${msg.score.p1}-${msg.score.p2}`);
+        
+        // Redirect to Home Page after game over
+        navigate("/");
       }
     };
   }
@@ -155,7 +160,8 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     return () => {
       try {
         wsRef.current?.close();
-      } catch {}
+      }
+      catch {}
       wsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +243,7 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
       <h1>Game Lobby</h1>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={goHome}>Back to Home</button>
+        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */}
         <button onClick={connect}>Reconnect WS</button>
         <button onClick={() => send({ type: "queue:join" })}>Join Queue</button>
         <button onClick={() => send({ type: "queue:leave" })}>Leave Queue</button>

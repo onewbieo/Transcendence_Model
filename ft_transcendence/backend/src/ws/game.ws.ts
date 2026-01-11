@@ -26,7 +26,7 @@ const BALL_SPEEDUP = 1.06;
 const BALL_MAX_SPEED = 14;
 
 const SERVE_DELAY_MS = 1200;
-const DISCONNECT_GRACE_MS = 10_000;
+const DISCONNECT_GRACE_MS = 60_000;
 
 // types //
 

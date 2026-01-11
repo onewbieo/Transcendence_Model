@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { leaderboard, type LeaderboardRow } from "../api";
 
-export default function LeaderboardPage({ goHome }: { goHome: () => void }) {
+export default function LeaderboardPage() {
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [status, setStatus] = useState("loading...");
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
     leaderboard()
@@ -19,7 +22,7 @@ export default function LeaderboardPage({ goHome }: { goHome: () => void }) {
       <h1>Leaderboard</h1>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={goHome}>Back to Home</button>
+        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */}
       </div>
 
       <p style={{ marginTop: 12 }}>Status: {status}</p>

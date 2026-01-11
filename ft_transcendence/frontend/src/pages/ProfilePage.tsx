@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { updateMe } from "../api";
 
 export default function ProfilePage({
@@ -12,6 +13,8 @@ export default function ProfilePage({
 }) {
   const [name, setName] = useState(meUser?.name ?? "");
   const [status, setStatus] = useState("");
+  
+  const navigate = useNavigate(); // Hook to navigate to different routes
 
   // if you open Profile, then refreshMe updates meUser later, sync the input
   useEffect(() => {
@@ -24,7 +27,8 @@ export default function ProfilePage({
       await updateMe({ name });     // ✅ PATCH /users/me
       await refreshMe();            // ✅ refresh Home immediately
       setStatus("Saved ✅");
-    } catch (e: any) {
+    }
+    catch (e: any) {
       setStatus(`Save failed ❌ ${e?.message ?? ""}`);
     }
   }
@@ -40,7 +44,7 @@ export default function ProfilePage({
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button onClick={onSave}>Save</button>
-        <button onClick={goHome}>Back to Home</button>
+        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */}
       </div>
 
       <p style={{ marginTop: 12 }}>{status}</p>

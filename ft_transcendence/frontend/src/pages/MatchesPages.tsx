@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { matches, type MatchRow } from "../api";
 
-export default function MatchesPage({
-  goHome,
-}: {
-  goHome: () => void;
-}) {
+export default function MatchesPage() {
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [status, setStatus] = useState("loading...");
+  const navigate = useNavigate(); // Hook to navigate to different routes
 
   useEffect(() => {
     matches()
@@ -25,7 +23,7 @@ export default function MatchesPage({
       <h1>Match History</h1>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={goHome}>Back to Home</button>
+        <button onClick={() => navigate("/")}>Back to Home</button> 
       </div>
 
       <p style={{ marginTop: 12 }}>Status: {status}</p>
