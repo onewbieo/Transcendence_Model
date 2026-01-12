@@ -72,18 +72,34 @@ export default function TournamentsPage() {
   }
 
   async function onJoin() {
+    if (!tid || tid <= 0) {
+      setStatus("❌ Tournament ID is required");
+      setBracket(null);
+      return;
+    }
+    
     setStatus("joining...");
+    setBracket(null);
     try {
       const res = await joinTournament(tid);
       setStatus(`Join result ✅ ${JSON.stringify(res)}`);
     }
     catch (e: any) {
       setStatus(`Join failed ❌ ${e?.message ?? ""}`);
+      setBracket(null);
     }
   }
 
   async function onLoadBracket() {
+    if (!tid || tid <= 0) {
+      setStatus("❌ Tournament ID is required");
+      setBracket(null);
+      return;
+    }
+    
     setStatus("loading bracket...");
+    setBracket(null);
+    
     try {
       const b = await tournamentBracket(tid);
       setBracket(b);
@@ -91,14 +107,22 @@ export default function TournamentsPage() {
     }
     catch (e: any) {
       setStatus(`Bracket failed ❌ ${e?.message ?? ""}`);
+      setBracket(null);
     }
   }
   
   async function onStart() {
+    if (!tid || tid <= 0) {
+      setStatus("❌ Tournament ID is required");
+      setBracket(null);
+      return;
+    }
+    
     console.log("=== START TOURNAMENT CLICKED ===");
     console.log("Current URL:", window.location.href);
     console.log("Tournament ID:", tid);
     setStatus("starting...");
+
     try {
       const t = await getTournament(tid);
       
@@ -132,6 +156,7 @@ export default function TournamentsPage() {
     catch (e: any) {
       // api() throws Error(msg) where msg comes from backend {error} / {message}
       setStatus(`Start failed ❌ ${e?.message ?? "Unknown error"}`);
+      setBracket(null);
     }
   }
 

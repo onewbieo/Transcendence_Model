@@ -185,7 +185,7 @@ export async function tournamentRoutes(app: FastifyInstance) {
         participants: {
           select: {
             user: {
-              select: { id: true, name: true },
+              select: { id: true, name: true, email: true },
             },
           },
         },

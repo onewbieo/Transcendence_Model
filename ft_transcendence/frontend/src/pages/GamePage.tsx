@@ -148,8 +148,11 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
 
         pushLog(`GAME OVER winner=${msg.winner} score=${msg.score.p1}-${msg.score.p2}`);
         
-        // Redirect to Home Page after game over
-        navigate("/");
+        // Delay redirect
+        setTimeout(() => {
+          // Redirect to Home Page after game over
+          navigate("/");
+        }, 5000);
       }
     };
   }
