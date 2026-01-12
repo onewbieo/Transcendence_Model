@@ -8,10 +8,50 @@ import {
   type TournamentBracket,
 } from "../api";
 import { useNavigate } from "react-router-dom"; // useNavigate for navigation
+import Bracket from "./Bracket";
+import { getToken } from "../lib/auth";
+
+function b64urlDecode(input: string) {
+  let s = input.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  return atob(s);
+}
+
+function getMyUserIdFromToken(): number | null {
+  const token = getToken();
+  if (!token)
+    return null;
+  
+  try {
+    const payload = token.split(".")[1];
+    const json = JSON.parse(b64urlDecode(payload));
+    const sub = Number(json.sub);
+    return Number.isFinite(sub) ? sub : null;
+  }
+  catch {
+    return null;
+  }
+}
+
+// pick the match that contains me, prefer earliest round / slot and not finished
+function findMyMatch(br: any, myId: number) {
+  if (!br?.matches)
+    return null;
+  
+  const mine = br.matches
+    .filter((m: any) =>
+      m.bracket === "WINNERS" &&
+      (m.player1?.id === myId || m.player2?.id === myId) &&
+      m.status !== "FINISHED"
+    )
+    .sort((a: any, b: any) => (a.round - b.round) || (a.slot - b.slot));
+
+  return mine[0] ?? null;
+}  
 
 export default function TournamentsPage() {
-  const [name, setName] = useState("Test Cup");
-  const [tid, setTid] = useState<number>(1);
+  const [name, setName] = useState("");
+  const [tid, setTid] = useState<number | null>(null);
 
   const [status, setStatus] = useState("");
   const [created, setCreated] = useState<any>(null);
@@ -20,37 +60,52 @@ export default function TournamentsPage() {
   const navigate = useNavigate(); // hook for navigation
   
   useEffect(() => {
-    if (!tid)
+    if (tid === null)
       return;
 
     console.log("Polling tournament status for tid:", tid);
 
     const interval = setInterval(async () => {
       try {
+        if (window.location.pathname === "/game")
+          return;
+        
         const t = await getTournament(tid);
         console.log("Polled tournament status:", t.status);
+        
+        if (t.status !== "ONGOING")
+          return;
+        
+        const myId = getMyUserIdFromToken();
+        if (!myId)
+          return;
+        
+        const b: any = await tournamentBracket(tid);
+        setBracket(b);
+        
+        const myMatch = findMyMatch(b, myId);
+        if (!myMatch) {
+          return;
+        }
+        
+        const params = new URLSearchParams({
+          tournamentId: String(tid),
+          bracket: "WINNERS",
+          round: String(myMatch.round),
+          slot: String(myMatch.slot),
+        });
 
-        // ✅ THIS IS THE KEY CONDITION
-        if (t.status === "ONGOING") {
-          const params = new URLSearchParams({
-            tournamentId: String(tid),
-            bracket: "WINNERS",
-            round: "1",
-            slot: "1",
-          });
+        const gameUrl = `/game?${params.toString()}`;
 
-          const gameUrl = `/game?${params.toString()}`;
+        console.log("Tournament started → redirecting to:", gameUrl);
 
-          console.log("Tournament started → redirecting to:", gameUrl);
-
-          // prevent infinite reload
-          if (window.location.pathname !== "/game") {
-            navigate(gameUrl);
-          }
+        // prevent infinite reload
+        if (window.location.pathname !== "/game" || window.location.search !== nextSearch) {
+          navigate(gameUrl);
         }
       }
       catch (e) {
-      console.error("Tournament poll error:", e);
+        console.error("Tournament poll error:", e);
       }
     }, 2000); // every 2 seconds
 
@@ -72,7 +127,7 @@ export default function TournamentsPage() {
   }
 
   async function onJoin() {
-    if (!tid || tid <= 0) {
+    if (tid === null || tid <= 0) {
       setStatus("❌ Tournament ID is required");
       setBracket(null);
       return;
@@ -80,6 +135,7 @@ export default function TournamentsPage() {
     
     setStatus("joining...");
     setBracket(null);
+    
     try {
       const res = await joinTournament(tid);
       setStatus(`Join result ✅ ${JSON.stringify(res)}`);
@@ -91,7 +147,7 @@ export default function TournamentsPage() {
   }
 
   async function onLoadBracket() {
-    if (!tid || tid <= 0) {
+    if (tid === null || tid <= 0) {
       setStatus("❌ Tournament ID is required");
       setBracket(null);
       return;
@@ -112,7 +168,7 @@ export default function TournamentsPage() {
   }
   
   async function onStart() {
-    if (!tid || tid <= 0) {
+    if (tid === null || tid <= 0) {
       setStatus("❌ Tournament ID is required");
       setBracket(null);
       return;
@@ -136,23 +192,9 @@ export default function TournamentsPage() {
       const res = await startTournament(tid);
       setStatus(`Tournament started ✅ ${res.message}`);
       
-      console.log("StartTournament API done");
-      
-      const params = new URLSearchParams({
-        tournamentId: String(tid),
-        bracket: "WINNERS",
-        round: "1",
-        slot: "1",
-      });
-      
-      const gameUrl = `/game?${params.toString()}`;
-      console.log("Redirecting to:", gameUrl);
-      
       const b = await tournamentBracket(tid);
       setBracket(b);
-      
-      navigate(gameUrl);
-    }
+    } 
     catch (e: any) {
       // api() throws Error(msg) where msg comes from backend {error} / {message}
       setStatus(`Start failed ❌ ${e?.message ?? "Unknown error"}`);
@@ -194,9 +236,15 @@ export default function TournamentsPage() {
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <span>Tournament ID:</span>
         <input
-          value={tid}
-          onChange={(e) => setTid(Number(e.target.value || 0))}
+          value={tid !== null ? tid : ""}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (value >= 1 || e.target.value === "") {
+              setTid(value);
+            }
+          }}
           type="number"
+          min="1"
           style={{ padding: 10, width: 120 }}
         />
         <button onClick={onJoin}>Join</button>
@@ -204,62 +252,8 @@ export default function TournamentsPage() {
         <button onClick={onStart}>Start Tournament</button>
       </div>
 
-      {bracket && (
-        <>
-          <h3 style={{ marginTop: 18 }}>Participants</h3>
-          {bracket.participants?.length ? (
-            <table style={{ width: "100%", marginTop: 8, borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th align="left">User ID</th>
-                  <th align="left">Name</th>
-                  <th align="left">Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bracket.participants.map((p, idx) => (
-                  <tr key={idx} style={{ borderTop: "1px solid #333" }}>
-                    <td>{p.user.id}</td>
-                    <td>{p.user.name ?? "-"}</td>
-                    <td>{(p.user as any).email ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No participants yet.</p>
-          )}
-
-          <h3 style={{ marginTop: 18 }}>Matches</h3>
-          {bracket.matches?.length ? (
-            <table style={{ width: "100%", marginTop: 8, borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th>Match</th>
-                  <th>Status</th>
-                  <th>Player 1</th>
-                  <th>Player 2</th>
-                  <th>Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bracket.matches.map((match, idx) => (
-                  <tr key={idx} style={{ borderTop: "1px solid #333" }}>
-                    <td>Match {match.id}</td>
-                    <td>{match.status}</td>
-                    <td>{match.player1.name}</td>
-                    <td>{match.player2.name}</td>
-                    <td>{match.player1Score} - {match.player2Score}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No matches generated yet.</p>
-          )}
-        </>
-      )}
+      {/* Render the bracket if it exists */}
+      {bracket && <Bracket bracket={bracket} />} {/* Display the bracket */}
     </div>
   );
 }
-

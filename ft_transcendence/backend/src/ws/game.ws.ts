@@ -26,7 +26,7 @@ const BALL_SPEEDUP = 1.06;
 const BALL_MAX_SPEED = 14;
 
 const SERVE_DELAY_MS = 1200;
-const DISCONNECT_GRACE_MS = 60_000;
+const DISCONNECT_GRACE_MS = 10_000;
 
 // types //
 
@@ -456,6 +456,26 @@ async function tryAdvanceTournamentAfterWin(params: {
   });
 }
 
+// 1. Add checkAndFinishTournament function
+async function checkAndFinishTournament(tournamentId: number) {
+  // Check if there are any ongoing matches in the tournament
+  const remainingMatches = await prisma.match.count({
+    where: { tournamentId, status: { not: "FINISHED" } }, // Count ongoing or draw matches
+  });
+
+  // If no ongoing matches, mark the tournament as finished
+  if (remainingMatches === 0) {
+    await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { status: "FINISHED" },
+    });
+    console.log(`Tournament ${tournamentId} marked as finished.`);
+  }
+  else {
+    console.log(`Tournament ${tournamentId} still has ongoing matches.`);
+  }
+}
+
 async function endMatchFinished(room: Room, matchId: string, winner: Role) {
   const winnerUserId = winner === "P1" ? room.p1UserId : room.p2UserId;
   const durationMs = Date.now() - room.startedAtMs;
@@ -478,21 +498,10 @@ async function endMatchFinished(room: Room, matchId: string, winner: Role) {
       },
     });
     
-    if (
-      typeof room.tournamentId === "number" &&
-      typeof room.round === "number" &&
-      typeof room.slot === "number" &&
-      room.bracket
-    ) {
-        await tryAdvanceTournamentAfterWin({
-          tournamentId: room.tournamentId,
-          bracket: room.bracket,
-          round: room.round,
-          slot: room.slot,
-          winnerUserId,
-        });
-        await tryFinishTournamentIfFinal(room.tournamentId);
-      }
+    // After the match ends, check and finish the tournament if needed
+    if (room.tournamentId) {
+      await checkAndFinishTournament(room.tournamentId);
+    } 
   }
   catch (e) {
     console.error("Failed to update match FINISHED", e);
@@ -564,7 +573,8 @@ function resetRoomForRematch(room: Room) {
 
 async function endMatchDraw(room: Room, matchId: string) {
   const durationMs = Date.now() - room.startedAtMs;
-
+  
+  // Mark Current DB match as DRAW
   let saved: {
     tournamentId: number | null;
     round: number | null;
@@ -588,45 +598,43 @@ async function endMatchDraw(room: Room, matchId: string) {
   catch (e) {
     console.error("Failed to update match DRAW", e);
   }
+  
+  if (saved?.tournamentId) {
+    // Tournament DRAW -> don't create a new match, just mark the match as ongoing
+    try {
+      // keep the same match ID and just update its status to ONGOING
+      await prisma.match.update({
+        where: { id : room.matchDbId },
+        data: {
+          status: "DRAW",
+        },
+      });
 
+      // Reset room for rematch ( but do NOT create a new match )
+      resetRoomForRematch(room);
+    
+      // Pausing the game to prevent it from starting immediately
+      room.paused = true;
+      room.pauseMessage = "DRAW - WAITING FOR RECONNECT";
+
+      broadcastState(room);
+      console.log("Tournament DRAW - rematch started in same room, waiting for reconnect");
+      
+      // After creating the rematch, check if the tournament is finished
+      await tryFinishTournamentIfFinal(saved.tournamentId);
+    }
+    catch (e) {
+      console.error("Failed to create tournament rematch", e);
+      // if rematch creation fails, at least clean up to avoid zombie rooms
+      cleanupMatch(matchId);
+    }
+  }  
   // If NOT tournament -> end normally
-  if (!saved?.tournamentId) {
-    cleanupMatch(matchId);
-    return;
-  }
-
-  // Tournament DRAW -> create rematch DB record, reuse SAME room
-  try {
-    const rematch = await prisma.match.create({
-      data: {
-        status: "ONGOING",
-        player1Id: room.p1UserId,
-        player2Id: room.p2UserId,
-        tournamentId: saved.tournamentId,
-        round: saved.round,
-        bracket: saved.bracket,
-        slot: saved.slot,
-      },
-      select: { id: true },
-    });
-
-    // switch room to new DB match id
-    room.matchDbId = rematch.id;
-
-    // reset room and re-serve
-    resetRoomForRematch(room);
-    room.serveDir = 1;
-    beginServe(room, 1, SERVE_DELAY_MS);
-
-    broadcastState(room);
-    console.log("Tournament DRAW - rematch started in same room");
-  }
-  catch (e) {
-    console.error("Failed to create tournament rematch", e);
-    // if rematch creation fails, at least clean up to avoid zombie rooms
-    cleanupMatch(matchId);
+  else {
+    await checkAndFinishTournamen(saved.tournamentId);
   }
 }
+
 
 function removeFromAllTournamentSlotQueues(ws: WebSocket) {
   for (const [key, q] of waitingByTournamentSlot) {
@@ -787,18 +795,22 @@ export function startGameLoop(room: Room, matchId: string) {
   }, 16);
 }
 
+// Function to check and finish the tournament if all matches are finished
 async function tryFinishTournamentIfFinal(tournamentId: number) {
-  // Tournament is only finished when there are ZERO matches that are not FINISHED.
-  // DRAW is not "done" because it triggers a rematch.
-  const remaining = await prisma.match.count({
-    where: { tournamentId, status: { not: "FINISHED" } }, // ONGOING or DRAW
+  // Check if there are any ongoing matches in the tournament
+  const remainingMatches = await prisma.match.count({
+    where: { tournamentId, status: { not: "FINISHED" } }, // Count ongoing or draw matches
   });
 
-  if (remaining === 0) {
+  // If no ongoing matches, mark the tournament as finished
+  if (remainingMatches === 0) {
     await prisma.tournament.update({
       where: { id: tournamentId },
       data: { status: "FINISHED" },
     });
+    console.log(`Tournament ${tournamentId} marked as finished.`);
+  } else {
+    console.log(`Tournament ${tournamentId} still has ongoing matches.`);
   }
 }
 
@@ -1065,14 +1077,11 @@ export async function gameWs(app: FastifyInstance) {
           
           if (!Number.isFinite(tournamentId) || !Number.isFinite(round) || !Number.isFinite(slot))
             return;
-          
           if (!Number.isFinite(round) || round < 1)
             return;
-          
           if (!Number.isInteger(slot) || slot < 1)
             return;
           
-          // optional: ensure tournament exists + ONGOING
           const tournament = await prisma.tournament.findUnique({
             where: { id: tournamentId },
             select: { id: true, status: true },
@@ -1084,17 +1093,14 @@ export async function gameWs(app: FastifyInstance) {
           }
           
           if (tournament.status !== "OPEN" && tournament.status !== "ONGOING") {
-            send(socket, { type : "match:reconnect_denied", reason: "tournament not active" });
+            send(socket, { type: "match:reconnect_denied", reason: "tournament not active" });
             return;
           }
           
-          // join tournament queue
+          // join tournament queue for this slot
           const q = getTournamentSlotQueue(tournamentId, bracket, round, slot);
-          
-          // remove from normal queue just in case
           waiting.delete(socket);
           
-          // purge closed sockets from this tournament queue
           for (const ws of q) if (ws.readyState !== WebSocket.OPEN)
             q.delete(ws);
           
@@ -1106,169 +1112,223 @@ export async function gameWs(app: FastifyInstance) {
           
           if (q.size < 2)
             return;
-            
+          
           const iter = q.values();
-          const p1 = iter.next().value as WebSocket;
-          const p2 = iter.next().value as WebSocket;
+          const s1 = iter.next().value as WebSocket;
+          const s2 = iter.next().value as WebSocket;
           
-          if (p1.readyState !== WebSocket.OPEN || p2.readyState !== WebSocket.OPEN) {
-            q.delete(p1);
-            q.delete(p2);
+          if (s1.readyState !== WebSocket.OPEN || s2.readyState !== WebSocket.OPEN) {
+            q.delete(s1);
+            q.delete(s2);
             return;
           }
           
-          q.delete(p1);
-          q.delete(p2);
-                
-          const p1UserId = socketToUserId.get(p1);
-          const p2UserId = socketToUserId.get(p2);
+          q.delete(s1);
+          q.delete(s2);
           
-          if (!p1UserId || !p2UserId) {
-            send(p1, { type: "match:reconnect_denied", reason: "auth missing" });
-            send(p2, { type: "match:reconnect_denied", reason: "auth missing" });
+          const u1 = socketToUserId.get(s1);
+          const u2 = socketToUserId.get(s2);
+          
+          if (!u1 || !u2) {
+            send(s1, { type: "match:reconnect_denied", reason: "auth missing" });
+            send(s2, { type: "match:reconnect_denied", reason: "auth missing" });
             return;
           }
           
-          if (p1UserId === p2UserId) {
-            q.add(p1);
-            send(p2, { type: "match:reconnect_denied", reason: "cannot match against yourself" });
-            q.delete(p2);
+          if (u1 === u2) {
+            q.add(s1);
+            send(s2, { type: "match:reconnect_denied", reason: "cannot match against yourself" });
             return;
           }
           
           const key = slotKey(tournamentId, bracket, round, slot);
-          // If there is already a ROOM for this tournament slot, reuse it instead of making a new room.
           
+          // ✅ 1) Reuse existing in-memory room if already created for this slot
           const existingRoomId = roomByTournamentSlot.get(key);
           if (existingRoomId) {
-            const existingRoom = rooms.get(existingRoomId);
-            
-              if (existingRoom) {
-                // bind by userId (queue order may swap)
-                if (existingRoom.p1UserId === p1UserId)
-                  existingRoom.p1 = p1;
-                else if (existingRoom.p2UserId === p1UserId)
-                  existingRoom.p2 = p1;
-                if (existingRoom.p1UserId === p2UserId)
-                  existingRoom.p1 = p2;
-                else if (existingRoom.p2UserId === p2UserId)
-                  existingRoom.p2 = p2;
+            const r = rooms.get(existingRoomId);
+              if (r) {
+                // attach by userId (stable)
+                if (r.p1UserId === u1)
+                  r.p1 = s1;
+                else if (r.p2UserId === u1)
+                  r.p2 = s1;
                 
-                const role1: Role = existingRoom.p1UserId === p1UserId ? "P1" : "P2";
-                const role2: Role = existingRoom.p1UserId === p2UserId ? "P1" : "P2";
+                if (r.p1UserId === u2)
+                  r.p1 = s2;
+                else if (r.p2UserId === u2)
+                  r.p2 = s2;
                 
-                socketToMatch.set(p1, { matchId: existingRoomId, role: role1 });
-                socketToMatch.set(p2, { matchId: existingRoomId, role: role2 });
+                const roleFor = (uid: number): Role => (uid === r.p1UserId ? "P1" : "P2");
+                const role1 = roleFor(u1);
+                const role2 = roleFor(u2);
                 
-                send(p1, { type: "match:found", matchId: existingRoomId, youAre: role1 });
-                send(p2, { type: "match:found", matchId: existingRoomId, youAre: role2 });
+                socketToMatch.set(s1, { matchId: existingRoomId, role: role1 });
+                socketToMatch.set(s2, { matchId: existingRoomId, role: role2 });
                 
-                existingRoom.userPaused = false;
-                existingRoom.paused = true;
-                existingRoom.pauseMessage = "READY";
-                // cancel grace timers if they were running
-                if (existingRoom.disconnectCountdownInterval) {
-                  clearInterval(existingRoom.disconnectCountdownInterval);
-                  existingRoom.disconnectCountdownInterval = undefined;
-                }
-                if (existingRoom.p1DisconnectTimer) {
-                  clearTimeout(existingRoom.p1DisconnectTimer);
-                  existingRoom.p1DisconnectTimer = undefined;
-                }
-                if (existingRoom.p2DisconnectTimer) {
-                  clearTimeout(existingRoom.p2DisconnectTimer);
-                  existingRoom.p2DisconnectTimer = undefined;
-                }
-                existingRoom.disconnectDeadlineMs = undefined;
-                broadcastState(existingRoom);
+                send(s1, { type: "match:found", matchId: existingRoomId, youAre: role1 });
+                send(s2, { type: "match:found", matchId: existingRoomId, youAre: role2 });
                 
+                r.userPaused = false;
+                r.paused = true;
+                r.pauseMessage = "READY";
+                broadcastState(r);
                 return;
             }
             else {
-                roomByTournamentSlot.delete(key);
+              roomByTournamentSlot.delete(key);
             }
           }
           
-          const matchId = crypto.randomUUID();
-          
-          send(p1, { type: "match:found", matchId, youAre: "P1" });
-          send(p2, { type: "match:found", matchId, youAre: "P2" });
-          
-          const startY = (HEIGHT - PADDLE_HEIGHT) / 2;
-          
-          // IMPORTANT: Create DB match with tournamentId
-          // round/bracket/slot: If you dont have bracket generation yet, 
-          // set them null for now and at least tournamentId will exist
-          // so DRAW rematch triggers
-          // 1) If this slot already has a FINISHED match, do NOT allow another match here.
-          const finished = await prisma.match.findFirst({
-            where: { tournamentId, bracket, round, slot, status: "FINISHED" },
-            select: { id: true },
+          // ✅ 2) Get the placeholder DB match created by generateTournamentMatches()
+          const dbMatch = await prisma.match.findFirst({
+            where: { tournamentId, bracket, round, slot },
+            select: { id: true, status: true, player1Id: true, player2Id: true },
           });
           
-          if (finished) {
-            send(p1, { type: "match:reconnect_denied", reason: "this match is already finished" });
-            send(p2, { type: "match:reconnect_denied", reason: "this match is already finished" });
+          if (!dbMatch) {
+            send(s1, { type: "match:reconnect_denied", reason: "match not generated yet" });
+            send(s2, { type: "match:reconnect_denied", reason: "match not generated yet" });
             return;
           }
           
-          // 2) If there's already an ONGOING match for this slot, reuse it (no duplicates).
-          const existing = await prisma.match.findFirst({
-            where: { tournamentId, bracket, round, slot, status: "ONGOING" },
-            select: { id: true, player1Id: true, player2Id: true },
-          });
-          
-          let matchDbId: number;
-          
-          if (existing) {
-            // must be same pair (either order)
-            const samePair =
-              (existing.player1Id === p1UserId && existing.player2Id === p2UserId) ||
-              (existing.player1Id === p2UserId && existing.player2Id === p1UserId);
-            
-            if (!samePair) {
-              send(p1, { type: "match:reconnect_denied", reason: "slot already assigned to other players" });
-              send(p2, { type: "match:reconnect_denied", reason: "slot already assigned to other players" });
-              return;
-            }
-            
-            matchDbId = existing.id;
+          if (dbMatch.status === "FINISHED") {
+            send(s1, { type: "match:reconnect_denied", reason: "match already finished" });
+            send(s2, { type: "match:reconnect_denied", reason: "match already finished" });
+            return;
           }
-          else {
-            const created = await prisma.match.create({
-              data: {
-                status: "ONGOING",
-                player1Id: p1UserId,
-                player2Id: p2UserId,
-                tournamentId,
-                bracket,
-                round,
-                slot,
-              },
-              select: { id: true },
+          
+          const a = dbMatch.player1Id;
+          const b = dbMatch.player2Id;
+          
+          if (!a || !b) {
+            send(s1, { type: "match:reconnect_denied", reason: "players not assigned yet" });
+            send(s2, { type: "match:reconnect_denied", reason: "players not assigned yet" });
+            return;
+          }
+          
+          // ✅ Only these two users are allowed into this slot
+          const allowed = (u1 === a && u2 === b) || (u1 === b && u2 === a);
+          if (!allowed) {
+            send(s1, { type: "match:reconnect_denied", reason: "slot assigned to other players" });
+            send(s2, { type: "match:reconnect_denied", reason: "slot assigned to other players" });
+            return;
+          }
+          
+          // If the match status is DRAW, we don't create a new match. We simply resume the existing match.
+          if (dbMatch.status === "DRAW") {
+            // Mark this match as ONGOING
+            await prisma.match.update({
+              where: { id: dbMatch.id },
+              data: { status: "ONGOING" },
             });
             
-            matchDbId = created.id;
+            const roleForDb = (uid: number): Role => (uid === a ? "P1" : "P2");
+            const role1 = roleForDb(u1);
+            const role2 = roleForDb(u2);
+            
+            const p1Socket = role1 === "P1" ? s1 : s2;
+            const p2Socket = role1 === "P1" ? s2 : s1;
+            
+            const matchId = dbMatch.id;
+            send(s1, { type: "match:found", matchId, youAre: role1 });
+            send(s2, { type: "match:found", matchId, youAre: role2 });
+            
+            const startY = (HEIGHT - PADDLE_HEIGHT) / 2;
+            
+            const room: Room = {
+              p1: p1Socket,
+              p2: p2Socket,
+              
+              // Use DB match info
+              p1UserId: a,
+              p2UserId: b,
+              
+              tick: 0,
+              p1Up: false,
+              p1Down: false,
+              p2Up: false,
+              p2Down: false,
+              
+              p1Y: startY,
+              p2Y: startY,
+              
+              ball: { x: WIDTH / 2, y: HEIGHT / 2, vx: BALL_SPEED, vy: BALL_SPEED * 0.7 },
+              
+              paused: false,
+              pauseMessage: "",
+              
+              scoreP1: 0,
+              scoreP2: 0,
+              
+              matchDbId: dbMatch.id,
+              startedAtMs: Date.now(),
+              
+              tournamentId,
+              bracket,
+              round,
+              slot,
+            };
+            
+            rooms.set(matchId, room);
+            roomByTournamentSlot.set(key, matchId);
+            
+            socketToMatch.set(p1Socket, { matchId, role: "P1" });
+            socketToMatch.set(p2Socket, { matchId, role: "P2" });
+            
+            startGameLoop(room, matchId);
+            return;
           }
           
+          // mark this placeholder as ONGOING once both have connected
+          if (dbMatch.status !== "ONGOING") {
+            await prisma.match.update({
+              where: { id: dbMatch.id },
+              data: { status: "ONGOING" },
+            });
+          }
+          
+          // ✅ Roles must follow DB (player1Id is P1, player2Id is P2)
+          const roleForDb = (uid: number): Role => (uid === a ? "P1" : "P2");
+          const role1 = roleForDb(u1);
+          const role2 = roleForDb(u2);
+          
+          // build room sockets according to role
+          const p1Socket = role1 === "P1" ? s1 : s2;
+          const p2Socket = role1 === "P1" ? s2 : s1;
+          
+          const matchId = crypto.randomUUID();
+          send(s1, { type: "match:found", matchId, youAre: role1 });
+          send(s2, { type: "match:found", matchId, youAre: role2 });
+          
+          const startY = (HEIGHT - PADDLE_HEIGHT) / 2;
+          
           const room: Room = {
-            p1,
-            p2,
-            p1UserId,
-            p2UserId,
+            p1: p1Socket,
+            p2: p2Socket,
+            
+            // IMPORTANT: stable by DB
+            p1UserId: a,
+            p2UserId: b,
+            
             tick: 0,
             p1Up: false,
             p1Down: false,
             p2Up: false,
             p2Down: false,
+            
             p1Y: startY,
             p2Y: startY,
+            
             ball: { x: WIDTH / 2, y: HEIGHT / 2, vx: BALL_SPEED, vy: BALL_SPEED * 0.7 },
+            
             paused: false,
             pauseMessage: "",
+            
             scoreP1: 0,
             scoreP2: 0,
-            matchDbId,
+            
+            matchDbId: dbMatch.id,
             startedAtMs: Date.now(),
             
             tournamentId,
@@ -1279,14 +1339,14 @@ export async function gameWs(app: FastifyInstance) {
           
           rooms.set(matchId, room);
           roomByTournamentSlot.set(key, matchId);
-          socketToMatch.set(p1, { matchId, role: "P1" });
-          socketToMatch.set(p2, { matchId, role: "P2" });
+          
+          socketToMatch.set(p1Socket, { matchId, role: "P1" });
+          socketToMatch.set(p2Socket, { matchId, role: "P2" });
           
           startGameLoop(room, matchId);
-          
           return;
-        }   
-          
+        }
+    
         case "queue:leave":
           removeFromQueue(socket);
           send(socket, { type: "queue:left" });

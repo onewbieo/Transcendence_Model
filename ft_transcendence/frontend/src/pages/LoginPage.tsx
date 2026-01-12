@@ -4,8 +4,8 @@ import { setToken } from "../lib/auth";
 import { useNavigate } from "react-router-dom"; // Correct import for useNavigate
 
 export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
-  const [email, setEmail] = useState(""); // your test user
-  const [password, setPassword] = useState(""); // change to your real test pw
+  const [email, setEmail] = useState("@example.com"); // your test user
+  const [password, setPassword] = useState("password123"); // change to your real test pw
   const [status, setStatus] = useState<string>("");
   const [meJson, setMeJson] = useState<any>(null);
   const navigate = useNavigate(); // Correct hook use

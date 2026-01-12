@@ -81,6 +81,30 @@ export async function tournamentRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "invalid tournament id" });
       }
       
+      // Check if the tournament exists
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: tournamentId },
+        select: { id: true, status: true },
+      });
+      
+      if (!tournament) {
+        return reply.code(404).send({ error: "Tournament not found" });
+      }
+      
+      // check if the tournament is open
+      if (tournament.status !== "OPEN") {
+        return reply.code(400).send({ error: "Tournament is not open" });
+      }
+      
+      // Check the number of participants already in the tournament
+      const participantCount = await prisma.tournamentParticipant.count({
+        where: { tournamentId },
+      });
+      
+      if (participantCount >= 4) {
+        return reply.code(400).send({ error: "Maximum participants reached" });
+      }
+      
       // Check if the user is already part of another active tournament
       const existingTournament = await prisma.tournamentParticipant.findFirst({
         where: {
@@ -95,19 +119,6 @@ export async function tournamentRoutes(app: FastifyInstance) {
         return reply.code(400).send({
           error: "You are already registered in another active tournament."
         });
-      } 
-      
-      const tournament = await prisma.tournament.findUnique({
-        where: { id:tournamentId },
-        select: { id: true, status: true },
-      });
-      
-      if (!tournament) {
-        return reply.code(404).send({ error: "tournament not found" });
-      }
-      
-      if (tournament.status !== "OPEN") {
-        return reply.code(400).send({ error: "tournament is not open" });
       }
       
       try {
