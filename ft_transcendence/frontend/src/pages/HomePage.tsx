@@ -9,7 +9,14 @@ import TournamentsPage from "./TournamentsPage";
 import LobbyPage from "./LobbyPage";
 import GamePage from "./GamePage";
 
-type MeUser = { id: number; email: string; name: string | null; role: string; createdAt: string };
+type MeUser = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string;
+  createdAt: string;
+  avatarUrl?: string | null;
+};
 
 export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const [meUser, setMeUser] = useState<MeUser | null>(null);
@@ -63,6 +70,20 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
       <p>
         Logged in as: <b>{meUser?.name ?? "(no name yet)"}</b>
       </p>
+      
+      <div style={{ marginTop: 12 }}>
+        <img
+          src={meUser?.avatarUrl ?? "/default-avatar.png"}
+          alt="avatar"
+          width={96}
+          height={96}
+          style={{
+            borderRadius: 12,
+            objectFit: "cover",
+            border: "1px solid #333",
+          }}
+        />
+      </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         {/* Use navigate for routing */}

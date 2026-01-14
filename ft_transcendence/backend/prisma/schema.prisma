@@ -43,6 +43,8 @@ model User {
   role          Role     @default(USER)
   createdAt     DateTime @default(now())
   
+  avatarUrl     String?  // e.g. "uploads/avatars/1-17000000.png"
+  
   googleSub     String?  @unique // <-- add this (nullable, unique)
   
   twoFactorEnabled Boolean @default(false)

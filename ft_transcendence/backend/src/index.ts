@@ -5,6 +5,11 @@ import jwt from "@fastify/jwt";
 import websocket from "@fastify/websocket";
 import cookie from "@fastify/cookie";
 
+import fastifyStatic from "@fastify/static";
+import multipart from "@fastify/multipart";
+import path from "path";
+import fs from "fs";
+
 import { healthRoutes } from "./routes/health";
 import { userRoutes } from "./routes/users";
 import { authRoutes } from "./routes/auth";
@@ -14,7 +19,6 @@ import { gameWs } from "./ws/game.ws";
 import { googleOAuthRoutes } from "./routes/oauth.google";
 import { twoFactorRoutes } from "./routes/2fa";
 
-
 async function main() {
   const app = Fastify({
     logger: true,
@@ -22,7 +26,7 @@ async function main() {
       ignoreTrailingSlash: true
     }
   });
-
+  
   await app.register(cors, { origin: true });
 
   // JWT must be registered before authRoutes uses app.jwt / req.jwtVerify()
@@ -33,6 +37,21 @@ async function main() {
   await app.register(cookie, {
     secret: process.env.COOKIE_SECRET ?? "dev-cookie-secret-change-me",
     hook: "onRequest",
+  });
+  
+  // uploads folder + static serve
+  const uploadDir = path.join(process.cwd(), "uploads");
+  const avatarDir = path.join(uploadDir, "avatars");
+  fs.mkdirSync(avatarDir, { recursive: true });
+  
+  await app.register(fastifyStatic, {
+    root: uploadDir,
+    prefix: "/uploads/",
+    decorateReply: false, // optional but avoids reply conflicts sometimes
+  });
+
+  await app.register(multipart, {
+    limits: { fileSize: 2 * 1024 * 1024 },
   });
   
   app.decorate("authenticate", async (req: any, reply: any) => {

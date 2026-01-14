@@ -2,6 +2,10 @@ import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
 
+import path from "path";
+import fs from "fs";
+import { pipeline } from "node:stream/promises";
+
 export async function userRoutes(app: FastifyInstance) {
   // ME ROUTES FIRST
   // GET /users/me (protected)
@@ -13,11 +17,49 @@ export async function userRoutes(app: FastifyInstance) {
     
     const me = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
     });
     
     return { me };
   });
+  
+  app.post(
+    "/users/me/avatar",
+    { preHandler: (app as any).authenticate },
+    async (req: any, reply) => {
+      const payload = req.user as { sub: number };
+      
+      const data = await req.file();
+      if (!data)
+        return reply.code(400).send({ error: "file required" });
+        
+      // basic type check
+      const allowed = ["image/png", "image/jpeg", "image/webp"];
+      if (!allowed.includes(data.mimetype)) {
+        return reply.code(400).send({ error: "only png/jpg/webp allowed" });
+      }
+      
+      const ext =
+        data.mimetype === "image/png" ? "png" :
+        data.mimetype === "image/webp" ? "webp" : "jpg";
+        
+      const filename = `u${payload.sub}_${Date.now()}.${ext}`;
+      const filepath = path.join(process.cwd(), "uploads", "avatars", filename);
+      
+      fs.mkdirSync(path.dirname(filepath), { recursive: true });
+      await pipeline(data.file, fs.createWriteStream(filepath));
+      
+      const avatarUrl = `/uploads/avatars/${filename}`;
+      
+      const user = await prisma.user.update({
+        where: { id: payload.sub },
+        data: { avatarUrl },
+        select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
+      });
+      
+      return reply.send({ me : user });
+    }
+  );
   
   // PATCH /users/me (protected) update my profile
   app.patch(
@@ -35,7 +77,7 @@ export async function userRoutes(app: FastifyInstance) {
     const user = await prisma.user.update({
       where: { id: payload.sub },
       data: { name: name ?? undefined },
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true , avatarUrl: true },
     });
     
     return reply.send(user);
@@ -103,7 +145,7 @@ export async function userRoutes(app: FastifyInstance) {
 
       const user = await prisma.user.findUnique({
         where: { id },
-        select: { id: true, name: true, createdAt: true }, // keep it simple
+        select: { id: true, name: true, createdAt: true, avatarUrl: true }, // keep it simple
       });
 
       if (!user) {
@@ -121,7 +163,7 @@ export async function userRoutes(app: FastifyInstance) {
     { preHandler: (app as any).authorizeAdmin },
     async () => {
   	return prisma.user.findMany({
-  	  select: { id: true, email: true, name: true, role: true, createdAt: true },
+  	  select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
   	});
     }
   );
@@ -140,7 +182,7 @@ export async function userRoutes(app: FastifyInstance) {
     
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
     });
     
     if (!user) {
@@ -180,7 +222,7 @@ export async function userRoutes(app: FastifyInstance) {
           // if name is undefined, Prisma ignores it (no change)
           name: name ?? undefined,
         },
-        select: { id: true, email: true, name: true, role: true, createdAt: true },
+        select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
       });
       
       return reply.send(user);

@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { getToken } from "../lib/auth";
 
 export type UserDTO = {
   id: number;
@@ -6,6 +7,7 @@ export type UserDTO = {
   name: string | null;
   createdAt?: string;
   role?: string;
+  avatarUrl?: string | null;
 };
 
 export type LoginOkResponse = {
@@ -39,19 +41,48 @@ export async function login(email: string, password: string): Promise<LoginRespo
   });
 }
 
-export async function me(): Promise<{
-  me: { id: number; email: string; name: string | null; role: string; createdAt: string };
-}> {
+export async function me(): Promise<{ me: UserDTO & { role: string; createdAt: string } }> {
   return api("/users/me");
 }
 
-export async function updateMe(input: { name?: string }): Promise<{
-  me: { id: number; email: string; name: string | null; role: string; createdAt: string };
-}> {
+export async function updateMe(input: { name?: string }): Promise<UserDTO & { role:string; createdAt: string }> {
   return api("/users/me", {
     method: "PATCH",
     body: JSON.stringify(input),
   });
+}
+
+export async function uploadAvatar(file: File): Promise<{
+  me: { id: number; email: string; name: string | null; role: string; createdAt: string; avatarUrl: string | null };
+}> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch("/api/users/me/avatar", {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  }
+  catch {
+    data = text;
+  }
+
+  if (!res.ok) {
+    const msg =
+      (data && (data.error || data.message)) ||
+      (typeof data === "string" ? data : "") ||
+      `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+
+  return data;
 }
 
 // Matches
