@@ -1,9 +1,36 @@
 import { api } from "./client";
 
-export type LoginResponse = {
-  token: string;
-  user: { id: number; email: string; name: string | null; createdAt: string };
+export type UserDTO = {
+  id: number;
+  email: string;
+  name: string | null;
+  createdAt?: string;
+  role?: string;
 };
+
+export type LoginOkResponse = {
+  token: string;
+  user: UserDTO;
+};
+
+export type Login2FAResponse = {
+  requires2fa: true;
+  tempToken: string;
+};
+
+export type Verify2FAResponse = {
+  token: string;
+  user: UserDTO;
+};
+
+export type LoginResponse = LoginOkResponse | Login2FAResponse;
+
+export async function verify2fa(tempToken: string, code: string): Promise<Verify2FAResponse> {
+  return api<Verify2FAResponse>("/auth/2fa/verify", {
+    method: "POST",
+    body: JSON.stringify({ tempToken, code }),
+  });
+}
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
   return api<LoginResponse>("/auth/login", {

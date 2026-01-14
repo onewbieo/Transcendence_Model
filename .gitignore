@@ -12,3 +12,4 @@ prisma/generated/
 
 # Logs
 *.log
+qr.png

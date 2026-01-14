@@ -6,6 +6,8 @@ type JwtPayload = {
   sub: number;
   email: string;
   role: "USER" | "ADMIN";
+  mfa?: boolean;
+  purpose?: "2fa";
 };
 
 export async function authRoutes(app: FastifyInstance) {
@@ -60,7 +62,19 @@ export async function authRoutes(app: FastifyInstance) {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok)
       return reply.code(401).send({ error: "invalid credentials" });
-      
+    
+    if (user.twoFactorEnabled) {
+      const tempToken = app.jwt.sign(
+        { sub: user.id, email: user.email, role: user.role, purpose: "2fa", mfa: false },
+        { expiresIn: "5m" }
+      );
+    
+      return reply.send({
+        requires2fa: true,
+        tempToken,
+      });
+    }
+     
     const token = app.jwt.sign({
       sub: user.id,
       email: user.email,

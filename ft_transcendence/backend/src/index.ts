@@ -12,10 +12,16 @@ import { matchRoutes } from "./routes/matches";
 import { tournamentRoutes } from "./routes/tournaments";
 import { gameWs } from "./ws/game.ws";
 import { googleOAuthRoutes } from "./routes/oauth.google";
+import { twoFactorRoutes } from "./routes/2fa";
 
 
 async function main() {
-  const app = Fastify({ logger: true, ignoreTrailingSlash: true });
+  const app = Fastify({
+    logger: true,
+    routerOptions: {
+      ignoreTrailingSlash: true
+    }
+  });
 
   await app.register(cors, { origin: true });
 
@@ -68,6 +74,7 @@ async function main() {
     }
   });
   
+  await app.register(twoFactorRoutes);
   await app.register(websocket);
   await app.register(gameWs);
   await app.register(healthRoutes);
@@ -79,7 +86,7 @@ async function main() {
   
   app.get("/", async () => ({
   	ok: true,
-  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id", "/tournaments", "/tournaments/id", "/tournaments/:id/join", "/tournaments/:id/bracket",],
+  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/auth/2fa/setup", "/auth/2fa/enable", "/auth/2fa/disable", "/auth/2fa/verify", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id", "/tournaments", "/tournaments/id", "/tournaments/:id/join", "/tournaments/:id/bracket",],
   }));
   
   await app.listen({ host: "0.0.0.0", port: 3000 });

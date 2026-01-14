@@ -45,6 +45,9 @@ model User {
   
   googleSub     String?  @unique // <-- add this (nullable, unique)
   
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String? // base32 secret for TOTP
+  
   matchesAsP1   Match[]  @relation("MatchPlayer1")
   matchesAsP2   Match[]  @relation("MatchPlayer2")
   wins          Match[]  @relation("MatchWinner")

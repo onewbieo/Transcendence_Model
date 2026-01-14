@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { login, me } from "../api";
+import { login, me, verify2fa } from "../api";
 import { setToken } from "../lib/auth";
 import { useNavigate } from "react-router-dom"; // Correct import for useNavigate
 
 export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [email, setEmail] = useState("@example.com"); // your test user
   const [password, setPassword] = useState("password123"); // change to your real test pw
+  
   const [status, setStatus] = useState<string>("");
   const [meJson, setMeJson] = useState<any>(null);
+  
+  const [otp, setOtp] = useState("");
+  const [tempToken, setTempToken] = useState<string | null>(null);
+  
   const navigate = useNavigate(); // Correct hook use
 
   async function onSubmit(e: React.FormEvent) {
@@ -17,6 +22,14 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
 
     try {
       const res = await login(email, password);
+      
+      // 2FA required path
+      if ("requires2fa" in res && res.requires2fa) {
+        setTempToken(res.tempToken);
+        setStatus("✅ Password OK. Enter your 2FA code.");
+        return;
+      }
+      
       setToken(res.token);
 
       setStatus("Logged in. Fetching /users/me...");
@@ -26,50 +39,109 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       setStatus("✅ Login OK");
       onLoggedIn();
       navigate("/"); // Navigate to home page after successful login
-    } catch (err: any) {
+    }
+    catch (err: any) {
       setStatus(`❌ ${err?.message ?? "login failed"}`);
     }
   }
-
+  
+  async function onSubmitOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("Verifying 2FA...");
+    
+    try {
+      if (!tempToken)
+        throw new Error("Missing tempToken. Please login again.");
+        
+      const res = await verify2fa(tempToken, otp);
+      
+      setToken(res.token);
+      
+      setStatus("Logged in. Fetching /users/me...");
+      const who = await me();
+      setMeJson(who);
+      
+      setStatus("✅ 2FA OK. Logged in.");
+      onLoggedIn();
+      navigate("/");
+    }
+    catch (err: any) {
+      setStatus(`❌ ${err?.message ?? "2fa failed"}`);
+    }
+  }
+        
   return (
     <div style={{ maxWidth: 420, margin: "48px auto", padding: 24 }}>
       <h1 style={{ marginBottom: 12 }}>Login</h1>
+      
+      {!tempToken ? (
+        <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>Email</span>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              style={{ padding: 10 }}
+            />
+          </label>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Email</span>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>Password</span>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              autoComplete="current-password"
+              style={{ padding: 10 }}
+            />
+          </label>
+
+          <button type="submit" style={{ padding: 10 }}>
+            Login
+          </button>
+          
+          <button
+            type="button"
+            style={{ padding: 10, width: "100%" }}
+            onClick={() => {
+              window.location.href = "/api/auth/oauth/google";
+            }}
+          >
+            Continue with Google
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={onSubmitOtp} style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>2FA code</span>
+            <input
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              style={{ padding: 10 }}
+            />
+          </label>
+          
+          <button type="submit" style={{ padding: 10 }}>
+            Verify
+          </button>
+          
+          <button
+            type="button"
             style={{ padding: 10 }}
-          />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Password</span>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            autoComplete="current-password"
-            style={{ padding: 10 }}
-          />
-        </label>
-
-        <button type="submit" style={{ padding: 10 }}>
-          Login
-        </button>
-        <button
-          type="button"
-          style={{ padding: 10, width: "100%" }}
-          onClick={() => {
-            window.location.href = "/api/auth/oauth/google";
-          }}
-        >
-          Continue with Google
-        </button>
-      </form>
+            onClick={() => {
+              setTempToken(null);
+              setOtp("");
+              setStatus("");
+            }}
+          >
+            Back
+          </button>
+        </form>
+      )}
 
       <p style={{ marginTop: 12 }}>{status}</p>
 
