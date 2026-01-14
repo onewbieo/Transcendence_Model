@@ -43,6 +43,8 @@ model User {
   role          Role     @default(USER)
   createdAt     DateTime @default(now())
   
+  googleSub     String?  @unique // <-- add this (nullable, unique)
+  
   matchesAsP1   Match[]  @relation("MatchPlayer1")
   matchesAsP2   Match[]  @relation("MatchPlayer2")
   wins          Match[]  @relation("MatchWinner")

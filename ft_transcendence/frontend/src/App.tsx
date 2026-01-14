@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import MatchesPage from "./pages/MatchesPages";
@@ -9,6 +9,7 @@ import LobbyPage from "./pages/LobbyPage";
 import GamePage from "./pages/GamePage";
 import LoginPage from "./pages/LoginPage";
 import { getToken } from "./lib/auth"; // Token helper for login status
+import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getToken());
@@ -24,7 +25,29 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={hasToken ? <HomePage onLogout={() => setHasToken(false)} /> : <LoginPage onLoggedIn={() => setHasToken(true)} />} />
+        <Route
+          path="/login"
+          element={
+            hasToken ? < Navigate to="/" replace /> : <LoginPage onLoggedIn={() => setHasToken(true)} />
+          }
+        />
+        
+        <Route
+          path="/oauth/callback"
+          element={<OAuthCallbackPage onLoggedIn={() => setHasToken(true)} />}
+        />
+        
+        <Route
+          path="/"
+          element={
+            hasToken ? (
+              <HomePage onLogout={() => setHasToken(false)} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/matches" element={<MatchesPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />

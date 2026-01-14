@@ -60,16 +60,32 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         <button type="submit" style={{ padding: 10 }}>
           Login
         </button>
+        <button
+          type="button"
+          style={{ padding: 10, width: "100%" }}
+          onClick={() => {
+            window.location.href = "/api/auth/oauth/google";
+          }}
+        >
+          Continue with Google
+        </button>
       </form>
 
       <p style={{ marginTop: 12 }}>{status}</p>
 
       {meJson && (
-        <pre style={{ marginTop: 12, padding: 12, background: "#111", color: "#eee", overflowX: "auto" }}>
+        <pre
+          style={{
+            marginTop: 12,
+            padding: 12,
+            background: "#111",
+            color: "#eee",
+            overflowX: "auto"
+          }}
+        >
           {JSON.stringify(meJson, null, 2)}
         </pre>
       )}
     </div>
   );
 }
-
