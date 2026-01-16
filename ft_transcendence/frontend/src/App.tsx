@@ -10,7 +10,10 @@ import LoginPage from "./pages/LoginPage";
 import { getToken } from "./lib/auth"; // Token helper for login status
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import FirstSetupPage from "./pages/FirstSetupPage";
+import UserCreationPage from "./pages/UserCreationPage.tsx";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import { api } from "./api";
+
 
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getToken());
@@ -82,6 +85,7 @@ export default function App() {
             isFirstTime ? (
               <Navigate to="/first-setup" replace />
             ) : hasToken ? (
+              // TODO: check role here
               <HomePage onLogout={() => setHasToken(false)} />
             ) : (
               <Navigate to="/login" replace />
@@ -100,6 +104,8 @@ export default function App() {
           path="/first-setup"
           element={<FirstSetupPage onSetupComplete={() => setIsFirstTime(false)} />}
         />
+        <Route path="/create-user" element={<UserCreationPage />} />
+        <Route path="/admin" element={<AdminDashboardPage />} />
       </Routes>
     </Router>
   );

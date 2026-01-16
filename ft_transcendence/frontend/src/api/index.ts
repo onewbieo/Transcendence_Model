@@ -1,4 +1,5 @@
-export { api } from "./client";
+import { api } from "./client";
+export { api }
 import { getToken } from "../lib/auth";
 
 export type UserDTO = {

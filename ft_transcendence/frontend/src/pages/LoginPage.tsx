@@ -30,6 +30,10 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         return;
       }
       
+      if (!("token" in res)) {
+        throw new Error("Login response missing token");
+      }
+      
       setToken(res.token);
 
       setStatus("Logged in. Fetching /users/me...");

@@ -80,7 +80,9 @@ export async function userRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
     });
     
-    await createNotification(user.id, `${user.name ?? user.email}, your profile has been updated.`);
+    if (me) {
+      await createNotification(me.id, `${me.name ?? me.email}, your profile has been viewed.`);
+    }
     
     return { me };
   });
@@ -223,6 +225,41 @@ export async function userRoutes(app: FastifyInstance) {
     }
   );
   
+  // POST /admin/users (create a new user)
+  app.post(
+    "/admin/users",
+    { preHandler: (app as any).authorizeAdmin },
+    async (req: any, reply) => {
+      const body = req.body as { email?: string; password?: string; name?: string; role?: string };
+      const email = body.email?.trim().toLowerCase();
+      const password = body.password;
+      const role = body.role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER";
+
+      if (!email || !password) {
+        return reply.code(400).send({ error: "email and password are required" });
+      }
+      if (password.length < 8) {
+        return reply.code(400).send({ error: "password must be at least 8 characters" });
+      }
+
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        return reply.code(409).send({ error: "email already exists" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      const user = await prisma.user.create({
+        data: { email, name: body.name ?? null, passwordHash, role },
+        select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
+      });
+
+      await createNotification(user.id, `Your account has been created by an admin.`);
+
+      return reply.code(201).send({ user });
+    }
+  );
+  
   // ADMIN ROUTES after
   // GET /users (list all users)   // READ //
   app.get(
@@ -305,46 +342,7 @@ export async function userRoutes(app: FastifyInstance) {
        return reply.code(500).send({ error: "internal error" });
      }
   });
-    
-  /*// POST /users (create user) // CREATE //
-  app.post("/users", async (req, reply) => {
-    const body = req.body as {
-      email?: string;
-      password?: string;
-      name?: string;
-    };
-    
-    const email = body.email?.trim().toLowerCase();
-    const password = body.password;
-    
-    if (!email || !password) {
-    	return reply.code(400).send({ error: "email and password are required"});
-    }
-    if (password.length < 8) {
-    	return reply.code(400).send({ error: "password must be at least 8 characters" });
-    }
-    
-    // prevent duplicates nicely (instead of Prisma crashing)
-    const existing = await prisma.user.findUnique({ 
-      where: { email },
-    });
-    
-    if (existing) {
-      return reply.code(409).send({
-        error: "email already exists",
-      });
-    }
-    
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    const user = await prisma.user.create({
-      data: { email, name: body.name ?? null, passwordHash },
-      select: { id: true, email: true, name: true, createdAt: true},
-      });
-    
-    return reply.code(201).send(user);
-  });*/
-  
+      
   // DELETE /admin/users/:id (delete user) // DELETE //
   app.delete(
     "/admin/users/:id",
