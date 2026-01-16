@@ -25,7 +25,7 @@ export default function UserCreationPage() {
 
       setStatus("User created successfully!");
       // redirect back to user list or dashboard
-      setTimeout(() => navigate("/admin/users"), 1500);
+      setTimeout(() => navigate("/admin"), 3000);
     }
     catch (err: any) {
       setStatus(`Error: ${err.message}`);

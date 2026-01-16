@@ -12,6 +12,7 @@ import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import FirstSetupPage from "./pages/FirstSetupPage";
 import UserCreationPage from "./pages/UserCreationPage.tsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import UserListPage from "./pages/UserListPage";
 import { api } from "./api";
 
 
@@ -106,6 +107,7 @@ export default function App() {
         />
         <Route path="/create-user" element={<UserCreationPage />} />
         <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/admin/users" element={<UserListPage />} />
       </Routes>
     </Router>
   );
