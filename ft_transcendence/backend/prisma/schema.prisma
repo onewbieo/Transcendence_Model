@@ -24,17 +24,6 @@ enum MatchStatus {
   PENDING
 }
 
-enum TournamentStatus {
-  OPEN
-  ONGOING
-  FINISHED
-}
-
-enum Bracket {
-  WINNERS
-  LOSERS
-}
-
 model User {
   id            Int      @id @default(autoincrement())
   email         String   @unique
@@ -54,7 +43,7 @@ model User {
   matchesAsP2   Match[]  @relation("MatchPlayer2")
   wins          Match[]  @relation("MatchWinner")
   
-  tournaments   TournamentParticipant[]
+  notifications Notification[]
 }
 
 model Match {
@@ -65,8 +54,8 @@ model Match {
   // players (nullable because bracket placeholders + BYEs)
   player1Id     Int?
   player2Id     Int?
-  player1       User?          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: Restrict)
-  player2       User?          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: Restrict)
+  player1       User?          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: SetNull )
+  player2       User?          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: SetNull )
   
   // score
   player1Score  Int           @default(0)
@@ -78,40 +67,17 @@ model Match {
   
   durationMs    Int?
   
-  // tournament linkage (optional)
-  tournamentId  Int?
-  tournament    Tournament?   @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
-  
-  round         Int?
-  bracket       Bracket?
-  slot          Int? // bracket position
-  
-  @@index([tournamentId])
   @@index([player1Id, createdAt])
   @@index([player2Id, createdAt])
   @@index([winnerId])
 }
 
-model Tournament {
+model Notification {
   id              Int                 @id @default(autoincrement())
+  message         String
+  userId          Int?
+  read            Boolean             @default(false)
   createdAt       DateTime            @default(now())
-  name            String
-  status          TournamentStatus    @default(OPEN)
   
-  participants    TournamentParticipant[]
-  matches         Match[]
-}
-
-model TournamentParticipant {
-  id              Int                 @id @default(autoincrement())
-  tournamentId    Int
-  userId          Int
-  joinedAt        DateTime            @default(now())
-  
-  tournament      Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade) 
-  
-  @@unique([tournamentId, userId])
-  @@index([tournamentId])
-  @@index([userId])
+  user            User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

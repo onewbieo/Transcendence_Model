@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../prisma";
+import { createNotification } from "../services/notificationService"; 
 
 type JwtPayload = {
   sub: number;
@@ -136,6 +137,9 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
       email: user.email,
       role: user.role,
     } satisfies JwtPayload);
+    
+    // Notify user that they logged in via Google
+    await createNotification(user.id, "You have successfully logged in using Google!");
 
     // Redirect back to frontend with token
     return reply.redirect(`${frontendUrl}/oauth/callback?token=${encodeURIComponent(jwt)}`);

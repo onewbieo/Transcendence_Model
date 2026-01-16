@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
 import { prisma } from "../prisma";
+import { createNotification } from "../services/notificationService";
 
 type JwtPayload = {
   sub: number;
@@ -38,6 +39,9 @@ export async function twoFactorRoutes(app: FastifyInstance) {
       });
 
       const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url!);
+      
+      // Send notification about settingup 2FA
+      await createNotification(user.id, "Two-Factor Authentication has been successfully setup.");
 
       return reply.send({
         otpauthUrl: secret.otpauth_url,
@@ -75,6 +79,9 @@ export async function twoFactorRoutes(app: FastifyInstance) {
         where: { id: user.id },
         data: { twoFactorEnabled: true },
       });
+      
+      // Send notification about enabling 2FA
+      await createNotification(user.id, "Two-Factor Authentication has been successfully enabled.");
 
       return reply.send({ ok: true });
     }
@@ -109,6 +116,9 @@ export async function twoFactorRoutes(app: FastifyInstance) {
         where: { id: user.id },
         data: { twoFactorEnabled: false, twoFactorSecret: null },
       });
+      
+      // Send notification about disabled 2FA
+      await createNotification(user.id, "Two-Factor Authentication has been successfully disabled.");
 
       return reply.send({ ok: true });
     }
@@ -149,6 +159,9 @@ export async function twoFactorRoutes(app: FastifyInstance) {
       { sub: user.id, email: user.email, role: user.role, mfa: true } satisfies JwtPayload,
       { expiresIn: "7d" }
     );
+    
+    // Send notification about successful verification of 2FA
+    await createNotification(user.id, "Two-Factor Authentication has been successfully verified.");
 
     return reply.send({
       user: { id: user.id, email: user.email, name: user.name, role: user.role },

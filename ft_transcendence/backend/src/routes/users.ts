@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
+import { createNotification } from "../services/notificationService";
 
 import path from "path";
 import fs from "fs";
@@ -57,6 +58,9 @@ export async function userRoutes(app: FastifyInstance) {
         select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
       });
       
+      // Send notification after avatar update
+      await createNotification(user.id, `Your avatar has been updated.`); 
+      
       return reply.send({ me : user });
     }
   );
@@ -79,6 +83,8 @@ export async function userRoutes(app: FastifyInstance) {
       data: { name: name ?? undefined },
       select: { id: true, email: true, name: true, role: true, createdAt: true , avatarUrl: true },
     });
+    
+    await createNotification(user.id, `${user.name ?? user.email}, your profile has been updated.`);
     
     return reply.send(user);
   });
@@ -225,6 +231,8 @@ export async function userRoutes(app: FastifyInstance) {
         select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
       });
       
+      await createNotification(user.id, `Your account details have been updated by an admin.`);
+      
       return reply.send(user);
      }
      catch (err: any) {
@@ -287,18 +295,49 @@ export async function userRoutes(app: FastifyInstance) {
       if (!Number.isFinite(id)) {
         return reply.code(400).send({ error: "invalid id" });
       }
-    
+      
       try {
+        const admin = req.user as { sub: number };
+        const adminExists = await prisma.user.findUnique({
+          where: { id: admin.sub },
+        });
+        
+        if (!adminExists || adminExists.role !== "ADMIN") {
+          return reply.code(403).send({ error: "Admin user not found or no longer valid." });
+        }
+                
+        const userToDelete = await prisma.user.findUnique({
+          where: { id },
+        });
+        
+        if (!userToDelete) {
+          return reply.code(404).send({ error: "User not found" });
+        }
+        
+        if (userToDelete.role === "ADMIN") {
+          return reply.code(403).send({ error: "Cannot delete another admin user" });
+        }
+        
+        // Send notification about deletion
+        await createNotification(admin.sub, `You have successfully deleted user ${userToDelete.email} (${userToDelete.name}).`);
+         
+        // Delete related notifications first 
+        await prisma.notification.deleteMany({
+          where: { userId: id },
+        });
+        
+        // Delete the user
         await prisma.user.delete({
           where: { id }
         });
+        
         return reply.code(204).send();
       }
       catch (err: any) {
         if (err?.code === "P2025") {
           return reply.code(404).send({ error: "user not found" });
         }
-        req.log.error(err);
+        req.log.error("Error during user deletion:", err);
         return reply.code(500).send({ error: "internal error" });
       }
     }

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
+import { createNotification } from "../services/notificationService";
 
 type JwtPayload = {
   sub: number;
@@ -19,6 +20,7 @@ export async function authRoutes(app: FastifyInstance) {
     
     const email = body.email?.trim().toLowerCase();
     const password = body.password;
+    const role = body.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
     
     if (!email || !password)
     	return reply.code(400).send({ error: "email and password are required" });
@@ -32,7 +34,7 @@ export async function authRoutes(app: FastifyInstance) {
     const passwordHash = await bcrypt.hash(password, 10);
     
     const user = await prisma.user.create({
-      data: { email, name: body.name ?? null, passwordHash },
+      data: { email, name: body.name ?? null, passwordHash, role },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
     
@@ -41,6 +43,9 @@ export async function authRoutes(app: FastifyInstance) {
       email: user.email,
       role: user.role,
     } satisfies JwtPayload);
+    
+    console.log("Creating notification for user:", user.id);
+    await createNotification(user.id, `Welcome ${user.email}, your account has been created.`);
     
     return reply.code(201).send({ user, token });
   }); 
@@ -80,6 +85,10 @@ export async function authRoutes(app: FastifyInstance) {
       email: user.email,
       role: user.role,
     } satisfies JwtPayload);
+    
+    console.log("Creating notification for user:", user.id);
+    // Send notification after login
+    await createNotification(user.id, `Login successful.`);
     
     return reply.send({
       user: { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt },
