@@ -5,7 +5,6 @@ import { clearToken } from "../lib/auth";
 import ProfilePage from "./ProfilePage";
 import MatchesPage from "./MatchesPages";
 import LeaderboardPage from "./LeaderboardPage";
-import TournamentsPage from "./TournamentsPage";
 import LobbyPage from "./LobbyPage";
 import GamePage from "./GamePage";
 
@@ -58,7 +57,6 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const goToProfile = () => navigate("/profile");
   const goToMatches = () => navigate("/matches");
   const goToLeaderboard = () => navigate("/leaderboard");
-  const goToTournaments = () => navigate("/tournaments");
   const goToLobby = () => navigate("/lobby");
   const goToGame = () => navigate("/game");
   
@@ -90,7 +88,6 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         <button onClick={goToProfile}>Profile</button>
         <button onClick={goToMatches}>Matches</button>
         <button onClick={goToLeaderboard}>Leaderboard</button>
-        <button onClick={goToTournaments}>Tournaments</button>
         <button onClick={goToLobby}>Lobby</button>
         <button onClick={goToGame}>Game</button>
         <button

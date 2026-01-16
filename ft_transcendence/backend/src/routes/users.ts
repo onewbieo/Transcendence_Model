@@ -8,6 +8,65 @@ import fs from "fs";
 import { pipeline } from "node:stream/promises";
 
 export async function userRoutes(app: FastifyInstance) {
+  // Check if first setup is required
+  app.get(
+    "/admin/first-setup",
+    async (req,reply) => {
+      const existingUserCount = await prisma.user.count();
+    
+      if (existingUserCount > 0) {
+        return reply.code(400).send({ error: "Users already exist." });
+      }
+    
+      return reply.send({ firstSetupRequired: true });
+    }
+  );
+  
+  // First time setup route to create admin if no users exist
+  app.post(
+    "/admin/first-setup",
+    async (req, reply) => {
+      // If no users, create the first admin user
+      const body = req.body as { email?: string; password?: string; name?: string };
+      const { email, password, name } = body;
+      
+      console.log("Received body:", req.body);
+    
+      const existingUserCount = await prisma.user.count();
+      console.log('Existing user count:', existingUserCount); // Log the count of users
+      
+      // If there are already users in the database, don't proceed
+      if (existingUserCount > 0) {
+        return reply.code(400).send({ error: "Users already exist." });
+      }
+
+      if (!email || !password || !name) {
+        return reply.code(400).send({ error: "Email, password, and name are required." });
+      }
+
+      // Create the first admin user
+      const newAdminUser = await prisma.user.create({
+        data: {
+          email: email,
+          passwordHash: await bcrypt.hash(password, 10),
+          name: name,
+          role: 'ADMIN', // Set role to ADMIN
+        },
+      });
+      
+      // Log successful creation of admin user
+      console.log('Admin user created:', newAdminUser);
+    
+      // Send notification after creation of admin user.
+      await createNotification(newAdminUser.id, `Your admin account has been created.`);
+
+      return reply.code(201).send({
+        message: "Admin user created successfully.",
+        user: newAdminUser
+      });
+    }
+  );
+  
   // ME ROUTES FIRST
   // GET /users/me (protected)
   app.get(
@@ -20,6 +79,8 @@ export async function userRoutes(app: FastifyInstance) {
       where: { id: payload.sub },
       select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
     });
+    
+    await createNotification(user.id, `${user.name ?? user.email}, your profile has been updated.`);
     
     return { me };
   });
@@ -84,7 +145,7 @@ export async function userRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, createdAt: true , avatarUrl: true },
     });
     
-    await createNotification(user.id, `${user.name ?? user.email}, your profile has been updated.`);
+    await createNotification(user.id, `${user.name ?? user.email}, your password has been successfully updated.`);
     
     return reply.send(user);
   });

@@ -4,22 +4,55 @@ import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import MatchesPage from "./pages/MatchesPages";
 import LeaderboardPage from "./pages/LeaderboardPage";
-import TournamentsPage from "./pages/TournamentsPage";
 import LobbyPage from "./pages/LobbyPage";
 import GamePage from "./pages/GamePage";
 import LoginPage from "./pages/LoginPage";
 import { getToken } from "./lib/auth"; // Token helper for login status
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
+import FirstSetupPage from "./pages/FirstSetupPage";
+import { api } from "./api";
 
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getToken());
+  const [isFirstTime, setIsFirstTime] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Check token storage to manage login state
+  // Check token storage and first time setup state
   useEffect(() => {
     const onStorage = () => setHasToken(!!getToken());
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+  
+  // Check if there are users (to decide if first setup is needed)
+  useEffect(() => {
+    const checkForUsers = async () => {
+      try {
+        const data = await api("/admin/first-setup", { method: "GET" })
+        if (data?.firstSetupRequired) {
+          setIsFirstTime(true);
+        }
+        else {
+          setIsFirstTime(false);
+        }
+      }
+      catch (error: any) {
+        // If backend returned 400, mark first time setup
+        if (error.message.includes("400")) {
+          setIsFirstTime(false);
+        }
+      }
+      finally {
+        setLoading(false);
+      }
+    };
+    
+    checkForUsers();
+  }, []);
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   // Main App with routing wrapped in Router
   return (
@@ -28,7 +61,13 @@ export default function App() {
         <Route
           path="/login"
           element={
-            hasToken ? < Navigate to="/" replace /> : <LoginPage onLoggedIn={() => setHasToken(true)} />
+            isFirstTime ? (
+              <Navigate to="/first-setup" replace />
+            ) : hasToken ? (
+              <Navigate to="/" replace />
+            ) : (
+              <LoginPage onLoggedIn={() => setHasToken(true)} />
+            )
           }
         />
         
@@ -40,7 +79,9 @@ export default function App() {
         <Route
           path="/"
           element={
-            hasToken ? (
+            isFirstTime ? (
+              <Navigate to="/first-setup" replace />
+            ) : hasToken ? (
               <HomePage onLogout={() => setHasToken(false)} />
             ) : (
               <Navigate to="/login" replace />
@@ -51,9 +92,14 @@ export default function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/matches" element={<MatchesPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/tournaments" element={<TournamentsPage />} />
         <Route path="/lobby" element={<LobbyPage />} />
         <Route path="/game" element={<GamePage />} />
+        
+        {/* First Time Setup Route */}
+        <Route
+          path="/first-setup"
+          element={<FirstSetupPage onSetupComplete={() => setIsFirstTime(false)} />}
+        />
       </Routes>
     </Router>
   );

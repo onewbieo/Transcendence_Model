@@ -225,4 +225,9 @@ model TournamentParticipant {
   @@index([tournamentId])
   @@index([userId])
 }
-  
+
+
+import { tournamentRoutes } from "./routes/tournaments";
+await app.register(tournamentRoutes);
+
+"/tournaments", "/tournaments/id", "/tournaments/:id/join", "/tournaments/:id/bracket",
