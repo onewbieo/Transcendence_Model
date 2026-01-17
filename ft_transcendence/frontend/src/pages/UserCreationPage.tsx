@@ -14,6 +14,12 @@ export default function UserCreationPage() {
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
+    
+    if (!email || !password) {
+      setStatus("Email and password are required.");
+      return;
+    }
+    
     setLoading(true);
     setStatus("Creating user...");
 
@@ -38,29 +44,78 @@ export default function UserCreationPage() {
   return (
     <div style={{ maxWidth: 420, margin: "48px auto", padding: 24 }}>
       <h1>Create New User</h1>
-      <form onSubmit={handleCreateUser} style={{ display: "grid", gap: 12 }}>
-        <label>
-          Email
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-        </label>
-        <label>
-          Password
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-        </label>
-        <label>
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} type="text" />
-        </label>
-        <label>
-          Role
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+      <form
+        onSubmit={handleCreateUser}
+        noValidate
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap:20,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <label style={{ fontSize: "18px" }}>
+            Email
+          </label>
+          <input 
+            style={{
+              padding: "4px",
+              width: "220px",
+            }}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+          />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>  
+          <label style={{ fontSize: "18px" }}>
+            Password
+          </label>
+            <input
+              style={{
+                padding: "4px",
+                width: "185px",
+              }}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+            />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <label style={{ fontSize: "18px" }}>
+            Name
+          </label>
+            <input
+              style={{
+                padding: "4px",
+                width: "218px",
+              }}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              type="text"
+            />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}> 
+        <label>Role</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
             <option value="USER">User</option>
             <option value="ADMIN">Admin</option>
           </select>
-        </label>
-        <button type="submit" disabled={loading}>
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            fontSize: "20px",
+            width: "71%",
+          }}
+        >
           {loading ? "Creating..." : "Create User"}
         </button>
+        
       </form>
       <p>{status}</p>
     </div>

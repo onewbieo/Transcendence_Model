@@ -85,15 +85,59 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         {/* Use navigate for routing */}
-        <button onClick={goToProfile}>Profile</button>
-        <button onClick={goToMatches}>Matches</button>
-        <button onClick={goToLeaderboard}>Leaderboard</button>
-        <button onClick={goToLobby}>Lobby</button>
-        <button onClick={goToGame}>Game</button>
+        <button
+          onClick={goToProfile}
+          style={{
+            flex: 0.15,
+            fontSize: "20px",
+          }}
+        >
+          Profile
+        </button>
+        <button
+          onClick={goToMatches}
+          style={{
+            flex: 0.2,
+            fontSize: "20px",
+          }}  
+        >
+          Matches
+        </button>
+        <button
+          onClick={goToLeaderboard}
+          style={{
+            flex: 0.22,
+            fontSize: "18px",
+          }}
+        >
+          Leaderboard
+        </button>
+        <button
+          onClick={goToLobby}
+          style={{
+            flex: 0.15,
+            fontSize: "20px",
+          }}
+        >
+          Lobby
+        </button>
+        <button
+          onClick={goToGame}
+          style={{
+            flex: 0.15,
+            fontSize: "22px",
+          }}
+        >
+          Game
+        </button>
         <button
           onClick={() => {
             clearToken();
             onLogout();
+          }}
+          style={{
+            flex: 0.14,
+            fontSize: "22px",
           }}
         >
           Logout

@@ -76,13 +76,18 @@ export default function ProfilePage() {
           type="file"
           accept="image/png, image/jpeg, image/webp"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          style={{ fontSize: "15px" }}
         />
-        <button onClick={onUploadAvatar}>Upload Avatar</button>
+        <button
+          onClick={onUploadAvatar}
+          style={{ fontSize: "15px", width: 195 }}>
+          Upload Avatar
+        </button>
       </div>
     </div>
 
-      <label style={{ display: "grid", gap: 6, maxWidth: 360, marginTop: 18 }}>
-        <span>Name</span>
+      <label style={{ display: "grid", gap: 4, maxWidth: 308, marginTop: 18 }}>
+        <span style={{ fontSize: "18px" }}>Name</span>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -91,8 +96,26 @@ export default function ProfilePage() {
       </label>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={onSave}>Save</button>
-        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */}
+        <button
+          onClick={onSave}
+          style={{
+            flex: 0.18,
+            fontSize: "16px",
+            padding: "2px",
+          }}
+        >
+          Save
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            flex: 0.22,
+            fontSize: "16px",
+            padding: "5px",
+          }}
+        >
+          Back to Home
+        </button> {/* Use navigate() for routing */}
       </div>
 
       <p style={{ marginTop: 12 }}>{status}</p>
