@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
-import { me } from "../api";
+import { me, notifications, type NotificationRow } from "../api";
 import { clearToken } from "../lib/auth";
 import ProfilePage from "./ProfilePage";
 import MatchesPage from "./MatchesPages";
@@ -20,6 +20,7 @@ type MeUser = {
 export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const [meUser, setMeUser] = useState<MeUser | null>(null);
   const [status, setStatus] = useState("loading...");
+  const [notifs, setNotifs] = useState<NotificationRow[]>([]);
   const navigate = useNavigate(); // Hook to navigate to different routes
   
   // Refresh user info on mount
@@ -31,7 +32,11 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   
   useEffect(() => {
     refreshMe()
-      .then(() => setStatus("ok ✅"))
+      .then(async () => {
+        setStatus("ok ✅");
+        const n = await notifications();
+        setNotifs((n.items ?? []).slice(0, 10));
+      })
       .catch((e: any) => {
         console.error("me() failed:", e);
         
@@ -63,9 +68,11 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   return (
     <div style={{ maxWidth: 720, margin: "48px auto", padding: 24 }}>
       <h1>ft_transcendence</h1>
-      <p>Status: {status}</p>
+      <p style={{ fontSize: "20px" }}>
+        Status: {status}
+      </p>
 
-      <p>
+      <p style={{ fontSize: "20px" }}>
         Logged in as: <b>{meUser?.name ?? "(no name yet)"}</b>
       </p>
       
@@ -143,8 +150,23 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
           Logout
         </button>
       </div>
-
-      <h2 style={{ marginTop: 24 }}>Me</h2>
+      
+      <h2 style={{ marginTop: 24 }}>Notifications</h2>
+        {notifs.length === 0 ? (
+          <p>No notifications yet.</p>
+        ) : (
+          <ul style={{ paddingLeft: 18 }}>
+            {notifs.map((n) => (
+              <li key={n.id} style={{ marginBottom: 6 }}>
+                <span style={{ opacity: 0.7 }}>
+                  {new Date(n.createdAt).toLocaleString()} —{" "}
+                </span>
+                {n.message}
+              </li>
+            ))}
+          </ul>
+        )}
+      <h3 style={{ marginTop: 24 }}>Me</h3>
       <pre style={{ padding: 12, background: "#111", color: "#eee", overflowX: "auto" }}>
         {JSON.stringify(meUser, null, 2)}
       </pre>

@@ -21,10 +21,6 @@ export async function matchRoutes(app: FastifyInstance) {
         status?: "FINISHED" | "DRAW";
         winnerId?: number | null;
         durationMs?: number;
-        tournamentId?: number;
-        round?: number;
-        bracket?: "WINNERS" | "LOSERS";
-        slot?: number;
       };
       
       const player1Id = body.player1Id;
@@ -35,120 +31,13 @@ export async function matchRoutes(app: FastifyInstance) {
       
       // Basic validation
       if (
-        !Number.isFinite(player1Id) ||
-        !Number.isFinite(player2Id) ||
-        !Number.isFinite(player1Score) ||
-        !Number.isFinite(player2Score)
+        typeof player1Id !== "number" ||
+        typeof player2Id !== "number" ||
+        typeof player1Score !== "number" ||
+        typeof player2Score !== "number"
       ) {
         return reply.code(400).send({
           error: "player1Id, player2Id, player1Score, player2Score are required numbers",
-        });
-      }
-      
-      // Tournament-aware behavior
-      const tournamentId = body.tournamentId;
-      const round = body.round;
-      const bracket = body.bracket;
-      const slot = body.slot;
-      
-      const isTournamentMatch =
-        Number.isFinite(tournamentId) &&
-        Number.isFinite(round) &&
-        (bracket === "WINNERS" || bracket === "LOSERS") &&
-        Number.isFinite(slot);
-      
-      if (isTournamentMatch) {
-        // Find the latest ONGOING attempt for that bracket slot
-        const current = await prisma.match.findFirst({
-          where: {
-            tournamentId: tournamentId as number,
-            round: round as number,
-            bracket: bracket as any,
-            slot: slot as number,
-            status: "ONGOING",
-          },
-          orderBy: { id: "desc" },
-        });
-        
-        if (!current) {
-          return reply.code(404).send({
-            error: "no ONGOING tournament match found for this bracket slot",
-          });
-        }
-      
-        // Safety: ensure submitted players match the current match players
-        const okPlayers = 
-          (current.player1Id === player1Id && current.player2Id === player2Id) ||
-          (current.player1Id === player2Id && current.player2Id === player1Id);
-        
-        if (!okPlayers) {
-          return reply.code(400).send({ error: "players do not match the current tournament match" });
-        }
-
-        // update current attempt with the result
-        const updated = await prisma.match.update({
-          where: { id: current.id },
-          data: {
-            status,
-            player1Score,
-            player2Score,
-            winnerId,
-            durationMs: Number.isFinite(body.durationMs) ? body.durationMs : null,
-          },
-          select: {
-            id: true,
-            createdAt: true,
-            status: true,
-            player1Id: true,
-            player2Id: true,
-            player1Score: true,
-            player2Score: true,
-            winnerId: true,
-            durationMs: true,
-            tournamentId: true,
-            round: true,
-            bracket: true,
-            slot: true,
-          },
-        });
-      
-        if (status === "DRAW") {
-          const rematch = await prisma.match.create({
-            data: {
-              status: "ONGOING",
-              player1Id: current.player1Id,
-              player2Id: current.player2Id,
-              player1Score: 0,
-              player2Score: 0,
-              winnerId: null,
-              durationMs: null,
-              tournamentId: tournamentId as number,
-              round: round as number,
-              bracket: bracket as any,
-              slot: slot as number,
-            },
-            select: {
-              id: true,
-              status: true,
-              tournamentId: true,
-              round: true,
-              bracket: true,
-              slot: true,
-            },
-          });
-        
-          return reply.code(200).send({
-            ok: true,
-            result: updated,
-            rematch,
-            message: "DRAW saved; rematch created",
-          });
-        }
-      
-        return reply.code(200).send({
-          ok: true,
-          result: updated,
-          message: "Tournament match result saved",
         });
       }
       

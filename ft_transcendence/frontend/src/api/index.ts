@@ -11,6 +11,17 @@ export type UserDTO = {
   avatarUrl?: string | null;
 };
 
+export type NotificationRow = {
+  id: number;
+  message: string;
+  read: boolean;
+  createdAt: string;
+};
+
+export async function notifications() {
+  return api("/notifications");
+}
+
 export type LoginOkResponse = {
   token: string;
   user: UserDTO;

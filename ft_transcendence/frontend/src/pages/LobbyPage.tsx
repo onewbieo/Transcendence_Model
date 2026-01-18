@@ -100,14 +100,56 @@ export default function LobbyPage({ goHome }: { goHome: () => void }) {
   return (
     <div style={{ maxWidth: 900, margin: "48px auto", padding: 24 }}>
       <h1>Game Lobby</h1>
-      <p>Status: {status}</p>
+      <p style={{ fontSize : "20px" }}
+        >Status: {status}
+      </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */} 
-        <button onClick={() => send({ type: "queue:join" })}>Queue: Join</button>
-        <button onClick={() => send({ type: "queue:leave" })}>Queue: Leave</button>
-        <button onClick={() => send({ type: "match:reconnect" })}>Reconnect</button>
-        <button onClick={() => send({ type: "ping" })}>Ping</button>
+        <button 
+          onClick={() => navigate("/")}
+          style={{
+            flex: "0.17",
+            fontSize: "20px",
+          }}
+        >
+          Back to Home
+        </button> {/* Use navigate() for routing */} 
+        <button
+          onClick={() => send({ type: "queue:join" })}
+          style={{
+            flex: "0.17",
+            fontSize: "20px",
+          }}
+        >
+          Queue: Join
+        </button>
+        <button
+          onClick={() => send({ type: "queue:leave" })}
+          style={{
+            flex: "0.17",
+            fontSize: "20px",
+          }}
+        >
+          Queue: Leave
+        </button>
+        <button
+          onClick={() => send({ type: "match:reconnect" })}
+          style={{
+            flex: "0.17",
+            fontSize: "20px",
+          }}
+        >
+          Reconnect
+        </button>
+        <button
+          onClick={() => send({ type: "ping" })}
+          style={{
+            flex: "0.17",
+            fontSize: "20px",
+          }}
+        >
+          Ping
+        </button>
       </div>
 
       <div style={{ marginTop: 16 }}>

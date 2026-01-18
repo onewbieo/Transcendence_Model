@@ -23,13 +23,25 @@ export default function MatchesPage() {
       <h1>Match History</h1>
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={() => navigate("/")}>Back to Home</button> 
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            padding: 10,
+            fontSize : "15px",
+          }}  
+        >
+          Back to Home
+        </button> 
       </div>
 
-      <p style={{ marginTop: 12 }}>Status: {status}</p>
+      <p style={{ marginTop: 12, fontSize: "22px" }}>
+        Status: {status}
+      </p>
 
       {rows.length === 0 ? (
-        <p>No matches yet.</p>
+        <p style={{ fontSize: "22px" }}>
+          No matches yet.
+        </p>
       ) : (
         <table style={{ width: "100%", marginTop: 12, borderCollapse: "collapse" }}>
           <thead>

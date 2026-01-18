@@ -51,11 +51,11 @@ model Match {
   createdAt     DateTime      @default(now())
   status        MatchStatus   @default(PENDING)
   
-  // players (nullable because bracket placeholders + BYEs)
+  // players (REQUIRED for normal 1v1 matches)
   player1Id     Int?
   player2Id     Int?
-  player1       User?          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: SetNull )
-  player2       User?          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: SetNull )
+  player1       User?          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: SetNull)
+  player2       User?          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: SetNull)
   
   // score
   player1Score  Int           @default(0)

@@ -80,10 +80,6 @@ export async function userRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
     });
     
-    if (me) {
-      await createNotification(me.id, `${me.name ?? me.email}, your profile has been viewed.`);
-    }
-    
     return { me };
   });
   
@@ -147,7 +143,7 @@ export async function userRoutes(app: FastifyInstance) {
       select: { id: true, email: true, name: true, role: true, createdAt: true , avatarUrl: true },
     });
     
-    await createNotification(user.id, `${user.name ?? user.email}, your password has been successfully updated.`);
+    await createNotification(user.id, `${user.name ?? user.email}, your profile has been updated.`);
     
     return reply.send(user);
   });
@@ -192,9 +188,11 @@ export async function userRoutes(app: FastifyInstance) {
     const newHash = await bcrypt.hash(body.newPassword, 10);
     
     await prisma.user.update({
-      where: {id: payload.sub },
+      where: { id: payload.sub },
       data: { passwordHash: newHash },
     });
+    
+    await createNotification(payload.sub, `Your password has been updated successfully.`);
     
     return reply.send({ ok: true });
     }
@@ -255,6 +253,11 @@ export async function userRoutes(app: FastifyInstance) {
       });
 
       await createNotification(user.id, `Your account has been created by an admin.`);
+      
+      const adminId = Number(req.user?.sub);
+      if (Number.isFinite(adminId)) {
+        await createNotification(adminId, `You created user ${user.email} (${user.name ?? "-"})`);
+      }
 
       return reply.code(201).send({ user });
     }
@@ -399,6 +402,23 @@ export async function userRoutes(app: FastifyInstance) {
         req.log.error("Error during user deletion:", err);
         return reply.code(500).send({ error: "internal error" });
       }
+    }
+  );
+  
+  // GET /notifications (protected) - my notifications
+  app.get(
+    "/notifications",
+    { preHandler: (app as any).authenticate },
+    async (req: any) => {
+      const userId = Number(req.user?.sub);
+      const items = await prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: { id: true, message: true, read: true, createdAt: true },
+      });
+      
+      return { items };
     }
   );
 }
