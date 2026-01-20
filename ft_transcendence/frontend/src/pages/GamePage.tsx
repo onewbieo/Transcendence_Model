@@ -26,7 +26,6 @@ type ServerMsg =
 type ClientMsg =
   | { type: "ping" }
   | { type: "queue:join" }
-  | { type: "tournament:join"; tournamentId: number; bracket: "WINNERS" | "LOSERS"; round:number; slot: number }
   | { type: "queue:leave" }
   | { type: "game:input"; dir: "up" | "down"; pressed: boolean }
   | { type: "game:pause"; paused: boolean }
@@ -76,28 +75,8 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Try read tournament params from query string
-      const qs = new URLSearchParams(window.location.search);
-      
-      const tournamentId = Number(qs.get("tournamentId"));
-      const bracket = (qs.get("bracket") ?? "WINNERS") as "WINNERS" | "LOSERS";
-      const round = Number(qs.get("round"));
-      const slot = Number(qs.get("slot"));
-      
-      const isTournament =
-        Number.isFinite(tournamentId) && tournamentId > 0 &&
-        Number.isFinite(round) && round > 0 &&
-        Number.isFinite(slot) && slot > 0;
-        
-      if (isTournament) {
-        pushLog(`tournament join → t=${tournamentId} ${bracket} r=${round} s=${slot}`);
-        send({ type: "tournament:join", tournamentId, bracket, round, slot });
-      }
-      else {
-        send({ type: "match:reconnect" }); // optional auto-reconnect
-      }
       setWsStatus("open");
-      pushLog("WS open ✅");
+      pushLog("WS open ✅");  
     };
 
     ws.onclose = () => {
@@ -243,7 +222,7 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
 
   return (
     <div style={{ maxWidth: 1100, margin: "24px auto", padding: 24 }}>
-      <h1>Game Lobby</h1>
+      <h1>Game Room</h1>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */}

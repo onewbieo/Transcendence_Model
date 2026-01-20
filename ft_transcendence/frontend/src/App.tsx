@@ -4,7 +4,6 @@ import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import MatchesPage from "./pages/MatchesPages";
 import LeaderboardPage from "./pages/LeaderboardPage";
-import LobbyPage from "./pages/LobbyPage";
 import GamePage from "./pages/GamePage";
 import LoginPage from "./pages/LoginPage";
 import { getToken } from "./lib/auth"; // Token helper for login status
@@ -105,10 +104,6 @@ export default function App() {
         <Route
           path="/leaderboard"
           element={hasToken ? <LeaderboardPage /> : <Navigate to="/login" replace /> }
-        />
-        <Route
-          path="/lobby"
-          element={hasToken ? <LobbyPage /> : <Navigate to="/login" replace /> }
         />
         <Route
           path="/game"

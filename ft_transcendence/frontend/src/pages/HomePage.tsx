@@ -5,7 +5,6 @@ import { clearToken } from "../lib/auth";
 import ProfilePage from "./ProfilePage";
 import MatchesPage from "./MatchesPages";
 import LeaderboardPage from "./LeaderboardPage";
-import LobbyPage from "./LobbyPage";
 import GamePage from "./GamePage";
 
 type MeUser = {
@@ -70,7 +69,6 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const goToProfile = () => navigate("/profile");
   const goToMatches = () => navigate("/matches");
   const goToLeaderboard = () => navigate("/leaderboard");
-  const goToLobby = () => navigate("/lobby");
   const goToGame = () => navigate("/game");
   
   return (
@@ -103,7 +101,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         <button
           onClick={goToProfile}
           style={{
-            flex: 0.15,
+            flex: 0.18,
             fontSize: "20px",
           }}
         >
@@ -112,7 +110,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         <button
           onClick={goToMatches}
           style={{
-            flex: 0.2,
+            flex: 0.22,
             fontSize: "20px",
           }}  
         >
@@ -128,18 +126,9 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
           Leaderboard
         </button>
         <button
-          onClick={goToLobby}
-          style={{
-            flex: 0.15,
-            fontSize: "20px",
-          }}
-        >
-          Lobby
-        </button>
-        <button
           onClick={goToGame}
           style={{
-            flex: 0.15,
+            flex: 0.19,
             fontSize: "22px",
           }}
         >
@@ -148,7 +137,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         <button
           onClick={handleLogout}
           style={{
-            flex: 0.14,
+            flex: 0.19,
             fontSize: "22px",
           }}
         >
