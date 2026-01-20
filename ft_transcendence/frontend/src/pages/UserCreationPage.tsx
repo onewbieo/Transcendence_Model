@@ -50,7 +50,7 @@ export default function UserCreationPage() {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap:20,
+          gap: 20,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -115,7 +115,18 @@ export default function UserCreationPage() {
         >
           {loading ? "Creating..." : "Create User"}
         </button>
-        
+        <button
+          type="button"
+          onClick={() => navigate("/admin")}
+          style={{
+            fontSize: "20px",
+            width: "71%",
+            marginTop: 8,
+            padding: 3,
+          }}
+        >
+          Back to Admin Dashboard
+        </button>
       </form>
       <p>{status}</p>
     </div>

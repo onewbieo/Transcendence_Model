@@ -73,6 +73,17 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       setStatus(`❌ ${err?.message ?? "2fa failed"}`);
     }
   }
+  
+  function resetToLogin() {
+    setTempToken(null);
+    setOtp("");
+    setStatus("");
+    setMeJson(null);
+    navigate("/", { replace: true });
+    
+    // make the UI feel like it actually changed
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
         
   return (
     <div style={{ maxWidth: 420, margin: "48px auto", padding: 24 }}>
@@ -101,13 +112,13 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
             />
           </label>
 
-          <button type="submit" style={{ padding: 10 }}>
+          <button type="submit" style={{ padding: 10, fontSize: "20px" }}>
             Login
           </button>
           
           <button
             type="button"
-            style={{ padding: 10, width: "100%" }}
+            style={{ padding: 10, width: "100%", fontSize: "20px" }}
             onClick={() => {
               window.location.href = "/api/auth/oauth/google";
             }}
@@ -129,18 +140,14 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
             />
           </label>
           
-          <button type="submit" style={{ padding: 10 }}>
+          <button type="submit" style={{ padding: 10, fontSize: "20px" }}>
             Verify
           </button>
           
           <button
             type="button"
-            style={{ padding: 10 }}
-            onClick={() => {
-              setTempToken(null);
-              setOtp("");
-              setStatus("");
-            }}
+            style={{ padding: 10, fontSize: "20px" }}
+            onClick={resetToLogin}
           >
             Back
           </button>

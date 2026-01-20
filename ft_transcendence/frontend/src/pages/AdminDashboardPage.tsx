@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { clearToken } from "../lib/auth";
 
 const adminButtonStyle: React.CSSProperties = {
   width: "28%",
@@ -7,7 +9,15 @@ const adminButtonStyle: React.CSSProperties = {
   borderRadius: 30,
 };
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage({ onLogout }: { onLogout: () => void }) {
+  const navigate = useNavigate();
+  
+  function handleLogout() {
+    clearToken();
+    onLogout();
+    navigate("/login", { replace: true });
+  }
+  
   return (
     <div style={{ padding: 24 }}>
       <h1>Admin Dashboard</h1>
@@ -18,6 +28,9 @@ export default function AdminDashboardPage() {
         <Link to="/admin/users" style={{ textDecoration: "none" }}>
           <button style={adminButtonStyle}>View All Users</button>
         </Link>
+          <button style={adminButtonStyle} onClick={handleLogout}>
+            Logout (Go to Login)
+          </button>
       </nav>
     </div>
   );

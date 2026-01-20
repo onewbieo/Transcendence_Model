@@ -94,20 +94,48 @@ export default function App() {
           }
         />
         
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/matches" element={<MatchesPage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/lobby" element={<LobbyPage />} />
-        <Route path="/game" element={<GamePage />} />
+        <Route
+          path="/profile"
+          element={hasToken ? <ProfilePage /> : <Navigate to="/login" replace /> }
+        />
+        <Route
+          path="/matches"
+          element={hasToken ? <MatchesPage /> : <Navigate to="/login" replace /> }
+        />
+        <Route
+          path="/leaderboard"
+          element={hasToken ? <LeaderboardPage /> : <Navigate to="/login" replace /> }
+        />
+        <Route
+          path="/lobby"
+          element={hasToken ? <LobbyPage /> : <Navigate to="/login" replace /> }
+        />
+        <Route
+          path="/game"
+          element={hasToken ? <GamePage /> : <Navigate to="/login" replace /> } />
         
         {/* First Time Setup Route */}
         <Route
           path="/first-setup"
-          element={<FirstSetupPage onSetupComplete={() => setIsFirstTime(false)} />}
+          element={<FirstSetupPage onSetupComplete={() => setIsFirstTime(false)} /> }
         />
-        <Route path="/create-user" element={<UserCreationPage />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
-        <Route path="/admin/users" element={<UserListPage />} />
+        <Route
+          path="/create-user"
+          element={hasToken ? <UserCreationPage /> : <Navigate to="/login" replace /> } />
+        <Route
+          path="/admin"
+          element={
+            hasToken ? (
+              <AdminDashboardPage onLogout={() => setHasToken(false)} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={hasToken ? <UserListPage /> : <Navigate to="/login" replace /> }
+        />
       </Routes>
     </Router>
   );

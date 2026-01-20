@@ -1,6 +1,6 @@
 import { api } from "./client";
-export { api }
 import { getToken } from "../lib/auth";
+export { api }
 
 export type UserDTO = {
   id: number;
@@ -9,6 +9,7 @@ export type UserDTO = {
   createdAt?: string;
   role?: string;
   avatarUrl?: string | null;
+  twoFactorEnabled?: boolean;
 };
 
 export type NotificationRow = {
@@ -95,6 +96,36 @@ export async function uploadAvatar(file: File): Promise<{
   }
 
   return data;
+}
+
+export async function changePassword(oldPassword: string, newPassword: string): Promise<{ ok: true }> {
+  return api("/users/me/password", {
+    method: "PATCH",
+    body: JSON.stringify({ oldPassword, newPassword }),
+  });
+}
+
+export type TwoFASetupResponse = {
+  otpauthUrl: string;
+  qrDataUrl: string;
+};
+
+export async function twoFaSetup(): Promise<TwoFASetupResponse> {
+  return api("/auth/2fa/setup", { method: "POST" });
+}
+
+export async function twoFaEnable(code: string): Promise<{ ok: true }> {
+  return api("/auth/2fa/enable", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function twoFaDisable(code: string): Promise<{ ok: true }> {
+  return api("/auth/2fa/disable", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
 }
 
 // Matches

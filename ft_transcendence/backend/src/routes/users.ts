@@ -77,7 +77,15 @@ export async function userRoutes(app: FastifyInstance) {
     
     const me = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        avatarUrl: true,
+        twoFactorEnabled: true,
+      },
     });
     
     return { me };

@@ -21,6 +21,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const [meUser, setMeUser] = useState<MeUser | null>(null);
   const [status, setStatus] = useState("loading...");
   const [notifs, setNotifs] = useState<NotificationRow[]>([]);
+  
   const navigate = useNavigate(); // Hook to navigate to different routes
   
   // Refresh user info on mount
@@ -28,6 +29,12 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
     const data = await me();
     setMeUser(data.me);
     return data.me;
+  }
+  
+  function handleLogout() {
+    clearToken();
+    onLogout();
+    navigate("/login", { replace: true });
   }
   
   useEffect(() => {
@@ -51,6 +58,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
           setStatus("session expired ❌");
           clearToken();
           onLogout();
+          navigate("/login", { replace: true });
           return;
         }
 
@@ -138,10 +146,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
           Game
         </button>
         <button
-          onClick={() => {
-            clearToken();
-            onLogout();
-          }}
+          onClick={handleLogout}
           style={{
             flex: 0.14,
             fontSize: "22px",

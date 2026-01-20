@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { useNavigate } from "react-router-dom";
 
 export default function UserListPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [status, setStatus] = useState("");
+  
+  const navigate = useNavigate();
 
   async function fetchUsers() {
     setStatus("Loading users...");
@@ -32,6 +35,16 @@ export default function UserListPage() {
   return (
     <div style={{ maxWidth: 600, margin: "48px auto", padding: 24 }}>
       <h1>User List</h1>
+      <button
+        onClick={() => navigate("/admin")}
+        style={{
+          marginBottom: 16,
+          fontSize: "16px",
+          padding: 12,
+        }}
+      >
+        Back to Admin Dashboard
+      </button>
       {status && <p>{status}</p>}
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
