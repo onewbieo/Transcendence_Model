@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: transcendence_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: transcendence
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transcendence_user -d transcendence"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "5433:5432"
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://transcendence_user:password@postgres:5432/transcendence
+      JWT_SECRET: change-me-to-something-long
+      COOKIE_SECRET: some_long_random_string
+      GOOGLE_CLIENT_ID: "your_client_id"
+      GOOGLE_CLIENT_SECRET: "your_client_secret"
+      GOOGLE_REDIRECT_URL: "https://localhost/api/auth/oauth/google/callback"
+      FRONTEND_URL: "https://localhost"
+      PUBLIC_API_KEY: supersecret_key_change_me
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: ft_transcendence-frontend
+    build: ./frontend
+    command: ["sh", "-c", "echo frontend image built"]
+
+  nginx:
+    build: ./docker/nginx
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  pgdata:
+

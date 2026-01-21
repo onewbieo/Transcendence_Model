@@ -4,6 +4,8 @@ import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import websocket from "@fastify/websocket";
 import cookie from "@fastify/cookie";
+import swagger from "@fastify/swagger";
+import swaggerUI from "@fastify/swagger-ui";
 
 import fastifyStatic from "@fastify/static";
 import multipart from "@fastify/multipart";
@@ -17,6 +19,7 @@ import { matchRoutes } from "./routes/matches";
 import { gameWs } from "./ws/game.ws";
 import { googleOAuthRoutes } from "./routes/oauth.google";
 import { twoFactorRoutes } from "./routes/2fa";
+import { publicApiRoutes } from "./routes/publicApi";
 
 async function main() {
   const app = Fastify({
@@ -92,18 +95,59 @@ async function main() {
     }
   });
   
-  await app.register(twoFactorRoutes);
+  await app.register(swagger, {
+    swagger: {
+      info: {
+        title: "ft_transcendence API",
+        description: "Public API (API-key + rate limit) + core project endpoints",
+        version: "1.0.0",
+      },
+      schemes: ["https", "http"],
+      consumes: ["application/json"],
+      produces: ["application/json"],
+    },
+  });
+  
+  await app.register(swaggerUI, {
+    routePrefix: "/api/docs",
+  });
+  
   await app.register(websocket);
   await app.register(gameWs);
+ 
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(googleOAuthRoutes);
+  await app.register(twoFactorRoutes);
   await app.register(userRoutes);
   await app.register(matchRoutes);
+  await app.register(publicApiRoutes);
   
   app.get("/", async () => ({
   	ok: true,
-  	routes: ["/health", "/auth/signup", "/auth/login", "/auth/me", "/auth/2fa/setup", "/auth/2fa/enable", "/auth/2fa/disable", "/auth/2fa/verify", "/users/me", "/users/:id", "/matches", "/matches/:id", "/leaderboard", "/admin/users", "/admin/users/:id"],
+  	docs: "/api/docs",
+  	routes: [
+  	  "/health", 
+  	  "/auth/signup", 
+  	  "/auth/login", 
+  	  "/auth/me", 
+  	  "/auth/2fa/setup", 
+  	  "/auth/2fa/enable", 
+  	  "/auth/2fa/disable", 
+  	  "/auth/2fa/verify", 
+  	  "/users/me", 
+  	  "/users/:id", 
+  	  "/matches", 
+  	  "/matches/:id", 
+  	  "/leaderboard",
+  	  "/notifications",
+  	  "/admin/first-setup",
+  	  "/admin/users", 
+  	  "/admin/users/:id",
+  	  "/public/items",
+  	  "/public/items/:id",
+  	  "/api/docs",
+  	],
   }));
   
   await app.listen({ host: "0.0.0.0", port: 3000 });

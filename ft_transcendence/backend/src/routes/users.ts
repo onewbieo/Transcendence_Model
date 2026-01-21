@@ -14,11 +14,9 @@ export async function userRoutes(app: FastifyInstance) {
     async (req,reply) => {
       const existingUserCount = await prisma.user.count();
     
-      if (existingUserCount > 0) {
-        return reply.code(400).send({ error: "Users already exist." });
-      }
-    
-      return reply.send({ firstSetupRequired: true });
+      return reply.send({
+        firstSetupRequired: existingUserCount === 0,
+      });
     }
   );
   

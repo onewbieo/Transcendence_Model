@@ -9,10 +9,12 @@ type JwtPayload = {
   role: "USER" | "ADMIN";
 };
 
+const isHttps = (process.env.FRONTEND_URL ?? "").startsWith("https://:");
+
 const COOKIE_OPTS = {
   httpOnly: true,
   sameSite: "lax" as const,
-  secure: false, // set true in https
+  secure: isHttps,
   path: "/",
   maxAge: 10 * 60, // 10 mins
 };
