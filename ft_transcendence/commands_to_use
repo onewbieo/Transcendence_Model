@@ -10,3 +10,24 @@ cd frontend && npm run dev
 Dev mode HTTPS
 stop backend and frontend npm run dev
 docker compose up --build
+
+If code changes when you have dockers run
+docker compose down
+docker compose up --build
+
+If prisma changes logic then yes you need to built.
+
+DO NOT NPM RUN DEV while Docker is up. 
+
+
+
+Issue 1
+E-mail not checked on creating users.
+E-mail is already checked on creating admin user
+
+Issue 2
+Password limit was checked on creating user.
+Password limit was not really checked on creating admin
+
+Issue3
+2FA for your OAUTH user ? I mean you can only try enabling and disabling. Logging in doesnt require that haha. 
