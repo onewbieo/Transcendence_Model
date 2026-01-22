@@ -1,0 +1,12 @@
+1) Check which ports are being used when you wanna switch from https to http and vice versa.
+sudo ss -ltnp | egrep ':80|:443|:3000|:5173|:5432|:5433'
+
+2) One command for dev, one command for prod.
+Dev mode HTTP
+docker compose up -d postgres
+cd backend && npm run dev
+cd frontend && npm run dev
+
+Dev mode HTTPS
+stop backend and frontend npm run dev
+docker compose up --build

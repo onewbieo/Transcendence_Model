@@ -9,7 +9,7 @@ type JwtPayload = {
   role: "USER" | "ADMIN";
 };
 
-const isHttps = (process.env.FRONTEND_URL ?? "").startsWith("https://:");
+const isHttps = (process.env.FRONTEND_URL ?? "").startsWith("https://");
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -72,8 +72,8 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "missing code/state" });
     }
 
-    const stateCookie = reply.unsignCookie((req.cookies as any)?.g_state ?? "").value;
-    const verifierCookie = reply.unsignCookie((req.cookies as any)?.g_verifier ?? "").value;
+    const stateCookie = req.unsignCookie((req.cookies as any)?.g_state ?? "").value;
+    const verifierCookie = req.unsignCookie((req.cookies as any)?.g_verifier ?? "").value;
 
     if (!stateCookie || !verifierCookie) {
       return reply.code(400).send({ error: "oauth cookies missing/expired" });
@@ -83,8 +83,8 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
     }
 
     // Clear cookies ASAP
-    reply.clearCookie("g_state", { path: "/" });
-    reply.clearCookie("g_verifier", { path: "/" });
+    reply.clearCookie("g_state", { path: "/", secure: isHttps });
+    reply.clearCookie("g_verifier", { path: "/", secure: isHttps });
 
     const params = client.callbackParams(req.raw);
 

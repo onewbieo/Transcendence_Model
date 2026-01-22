@@ -13,3 +13,11 @@ prisma/generated/
 # Logs
 *.log
 qr.png
+
+# Env secrets
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
