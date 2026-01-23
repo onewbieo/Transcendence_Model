@@ -22,7 +22,7 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
     const t = localStorage.getItem(TEMP_TOKEN_KEY);
     if (t) {
       setTempToken(t);
-      setStatus("Google login OK. Enter your 2FA code.");
+      setStatus("✅ Google login OK. Enter your 2FA code.");
     }
   }, []);
 

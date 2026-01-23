@@ -1,23 +1,44 @@
-# TypeScript build output
-**/*.js
-**/*.js.map
-**/*.d.ts
-**/*.d.ts.map
-
-# Node
+# Dependencies
 node_modules/
 
-# Prisma
-prisma/generated/
+# Build output
+**/dist/
+**/build/
+**/.vite/
+
+# Env secrets
+.env
+.env.*
+ft_transcendence/backend/.env
+ft_transcendence/backend/.env.*
+ft_transcendence/frontend/.env
+ft_transcendence/frontend/.env.*
 
 # Logs
 *.log
 qr.png
 
-# Env secrets
-.env
-.env.*
-backend/.env
-backend/.env.*
-frontend/.env
-frontend/.env.*
+# Runtime / generated
+ft_transcendence/backend/uploads/
+
+# Prisma
+ft_transcendence/backend/prisma/generated/
+
+# Backend generated artifacts (TS outputs) - don't commit
+ft_transcendence/backend/**/*.js
+ft_transcendence/backend/**/*.js.map
+ft_transcendence/backend/**/*.d.ts
+ft_transcendence/backend/**/*.d.ts.map
+
+# Your unused code folders
+ft_transcendence/unused codes_backend/
+ft_transcendence/backend/src/routes/unused codes/
+ft_transcendence/unused_codes_frontend/
+
+# OS / editor junk
+.DS_Store
+.vscode/
+.idea/
+
+
+
