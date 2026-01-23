@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
 import { createNotification } from "../services/notificationService";
+import { normalizeEmail, validateEmail, validatePassword } from "../utils/validate";
 
 type JwtPayload = {
   sub: number;
@@ -18,14 +19,20 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/signup", async (req, reply) => {
     const body = req.body as { email?: string; password?: string; name?: string };
     
-    const email = body.email?.trim().toLowerCase();
-    const password = body.password;
+    const email = normalizeEmail(body.email);
+    const password = body.password ?? "";
     const role = body.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
     
     if (!email || !password)
     	return reply.code(400).send({ error: "email and password are required" });
-    if (password.length < 8)
-    	return reply.code(400).send({ error: "password must be at least 8 characters" });
+    
+    const emailErr = validateEmail(email);
+    if (emailErr)
+      return reply.code(400).send({ error: emailErr });
+    
+    const pwErr = validatePassword(password);
+    if (pwErr)
+      return reply.code(400).send({ error : pwErr });
     
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing)

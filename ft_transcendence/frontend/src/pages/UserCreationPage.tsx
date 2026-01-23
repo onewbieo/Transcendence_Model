@@ -11,12 +11,31 @@ export default function UserCreationPage() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!email || !password) {
-      setStatus("Email and password are required.");
+    const normEmail = email.trim().toLowerCase();
+    const pw = password;
+    
+    if (!normEmail) {
+      setStatus("Email is required.");
+      return;
+    }
+    
+    if (!pw) {
+      setStatus("Password is required.");
+      return;
+    }
+    
+    if (!EMAIL_RE.test(normEmail)) {
+      setStatus("Invalid email format.");
+      return;
+    }
+    
+    if (pw.length < 8 || pw.length > 72) {
+      setStatus("Password must be 8-72 characters.");
       return;
     }
     
@@ -26,7 +45,7 @@ export default function UserCreationPage() {
     try {
       const data = await api("/admin/users", {
         method: "POST",
-        body: JSON.stringify({ email, password, name, role }),
+        body: JSON.stringify({ email: normEmail, password: pw, name: name.trim() || null, role }),
       });
 
       setStatus("User created successfully!");

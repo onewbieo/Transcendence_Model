@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma";
 import { createNotification } from "../services/notificationService";
+import { normalizeEmail, validateEmail, validatePassword } from "../utils/validate";
 
 import path from "path";
 import fs from "fs";
@@ -26,20 +27,32 @@ export async function userRoutes(app: FastifyInstance) {
     async (req, reply) => {
       // If no users, create the first admin user
       const body = req.body as { email?: string; password?: string; name?: string };
-      const { email, password, name } = body;
       
-      console.log("Received body:", req.body);
+      const email = normalizeEmail(body.email);
+      const password = body.password ?? "";
+      const name = body.name?.trim();
+      
+      if (!email || !password || !name) {
+        return reply.code(400).send({ error: "Email, password, and name are required." });
+      }
+      
+      const emailErr = validateEmail(email);
+      if (emailErr)
+        return reply.code(400).send({ error: emailErr });
+      
+      const pwErr = validatePassword(password);
+      if (pwErr)
+        return reply.code(400).send({ error: pwErr });
+      
+      if (name.length === 0) {
+        return reply.code(400).send({ error: "name cannot be empty" });
+      }
     
       const existingUserCount = await prisma.user.count();
-      console.log('Existing user count:', existingUserCount); // Log the count of users
       
       // If there are already users in the database, don't proceed
       if (existingUserCount > 0) {
         return reply.code(400).send({ error: "Users already exist." });
-      }
-
-      if (!email || !password || !name) {
-        return reply.code(400).send({ error: "Email, password, and name are required." });
       }
 
       // Create the first admin user
@@ -172,9 +185,9 @@ export async function userRoutes(app: FastifyInstance) {
       });
     }
     
-    if (body.newPassword.length < 8) {
+    if (body.newPassword.length < 8 || body.newPassword.length > 72) {
       return reply.code(400).send({
-        error: "new password must be at least 8 characters",
+        error: "new password must be 8-72 characters",
       });
     }
     
@@ -235,16 +248,22 @@ export async function userRoutes(app: FastifyInstance) {
     { preHandler: (app as any).authorizeAdmin },
     async (req: any, reply) => {
       const body = req.body as { email?: string; password?: string; name?: string; role?: string };
-      const email = body.email?.trim().toLowerCase();
-      const password = body.password;
+      
+      const email = normalizeEmail(body.email);
+      const password = body.password ?? "";
       const role = body.role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER";
-
+      
       if (!email || !password) {
-        return reply.code(400).send({ error: "email and password are required" });
+        return reply.code(400).send({ error: "email and password are required." });
       }
-      if (password.length < 8) {
-        return reply.code(400).send({ error: "password must be at least 8 characters" });
-      }
+
+      const emailErr = validateEmail(email);
+      if (emailErr)
+        return reply.code(400).send({ error: emailErr });
+      
+      const pwErr = validatePassword(password);
+      if (pwErr)
+        return reply.code(400).send({ error: pwErr });
 
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
@@ -252,20 +271,27 @@ export async function userRoutes(app: FastifyInstance) {
       }
 
       const passwordHash = await bcrypt.hash(password, 10);
-
-      const user = await prisma.user.create({
-        data: { email, name: body.name ?? null, passwordHash, role },
-        select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
-      });
-
-      await createNotification(user.id, `Your account has been created by an admin.`);
       
-      const adminId = Number(req.user?.sub);
-      if (Number.isFinite(adminId)) {
-        await createNotification(adminId, `You created user ${user.email} (${user.name ?? "-"})`);
-      }
+      try {
+        const user = await prisma.user.create({
+          data: { email, name: body.name ?? null, passwordHash, role },
+          select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
+        });
 
-      return reply.code(201).send({ user });
+        await createNotification(user.id, `Your account has been created by an admin.`);
+      
+        const adminId = Number(req.user?.sub);
+        if (Number.isFinite(adminId)) {
+          await createNotification(adminId, `You created user ${user.email} (${user.name ?? "-"})`);
+        }
+
+        return reply.code(201).send({ user });
+      }
+      catch (err : any) {
+        if (err?.code === "P2002")
+          return reply.code(409).send({ error: "email already exists" });
+        throw err;
+      }
     }
   );
   
