@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { login, me, verify2fa } from "../api";
 import { setToken } from "../lib/auth";
 import { useNavigate } from "react-router-dom"; // Correct import for useNavigate
+
+const TEMP_TOKEN_KEY = "tempToken";
 
 export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [email, setEmail] = useState("@example.com"); // your test user
@@ -14,6 +16,15 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [tempToken, setTempToken] = useState<string | null>(null);
   
   const navigate = useNavigate(); // Correct hook use
+  
+  // If OAUTH flow stored a tempToken, jump straight to 2FA step
+  useEffect(() => {
+    const t = localStorage.getItem(TEMP_TOKEN_KEY);
+    if (t) {
+      setTempToken(t);
+      setStatus("Google login OK. Enter your 2FA code.");
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +37,7 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       // 2FA required path
       if ("requires2fa" in res && res.requires2fa) {
         setTempToken(res.tempToken);
+        localStorage.setItem(TEMP_TOKEN_KEY, res.tempToken);
         setStatus("✅ Password OK. Enter your 2FA code.");
         return;
       }
@@ -33,6 +45,10 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       if (!("token" in res)) {
         throw new Error("Login response missing token");
       }
+      
+      // success: clear any tempToken leftover
+      localStorage.removeItem(TEMP_TOKEN_KEY);
+      setTempToken(null);
       
       setToken(res.token);
 
@@ -45,6 +61,10 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       navigate("/"); // Navigate to home page after successful login
     }
     catch (err: any) {
+      if (err?.status === 401) {
+        setStatus("❌ Wrong email or password.");
+        return;
+      }
       setStatus(`❌ ${err?.message ?? "login failed"}`);
     }
   }
@@ -58,6 +78,10 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         throw new Error("Missing tempToken. Please login again.");
         
       const res = await verify2fa(tempToken, otp);
+      
+      // Success clear tempToken
+      localStorage.removeItem(TEMP_TOKEN_KEY);
+      setTempToken(null);
       
       setToken(res.token);
       
@@ -75,13 +99,15 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   }
   
   function resetToLogin() {
+    // clear temp token everywhere
+    localStorage.removeItem(TEMP_TOKEN_KEY);
     setTempToken(null);
     setOtp("");
     setStatus("");
     setMeJson(null);
-    navigate("/", { replace: true });
     
     // make the UI feel like it actually changed
+    navigate("/", { replace: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
         

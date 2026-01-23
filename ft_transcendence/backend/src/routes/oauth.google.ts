@@ -7,6 +7,8 @@ type JwtPayload = {
   sub: number;
   email: string;
   role: "USER" | "ADMIN";
+  mfa?: boolean;
+  purpose?: "2fa";
 };
 
 const isHttps = (process.env.FRONTEND_URL ?? "").startsWith("https://");
@@ -26,10 +28,9 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUrl = process.env.GOOGLE_REDIRECT_URL;
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-  app.log.info({ clientId, redirectUrl }, "Google OAuth env check");
 
   if (!clientId || !clientSecret || !redirectUrl) {
-    app.log.warn("Google OAuth env vars missing; google oauth routes will still register but may fail.");
+    app.log.warn("Google OAuth env vars missing; routes may fail.");
   }
 
   // Discover Google OIDC config
@@ -105,7 +106,15 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
     // Find by googleSub first, then by email
     let user = await prisma.user.findFirst({
       where: { OR: [{ googleSub }, { email }] },
-      select: { id: true, email: true, name: true, role: true, createdAt: true, googleSub: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        googleSub: true,
+        twoFactorEnabled: true,
+      },
     });
 
     if (!user) {
@@ -121,7 +130,15 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
           passwordHash,
           googleSub,
         },
-        select: { id: true, email: true, name: true, role: true, createdAt: true, googleSub: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          googleSub: true,
+          twoFactorEnabled: true,
+        },
       });
     } else {
       // Ensure googleSub is linked + optionally update name
@@ -129,9 +146,31 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
         user = await prisma.user.update({
           where: { id: user.id },
           data: { googleSub, name: user.name ?? name },
-          select: { id: true, email: true, name: true, role: true, createdAt: true, googleSub: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            createdAt: true,
+            googleSub: true,
+            twoFactorEnabled: true,
+          },
         });
       }
+    }
+    
+    // Notify user OAUTH happened
+    await createNotification(user.id, "You have successfully logged in using Google!");
+    
+    // If 2FA enabled issue TempToken (same behavior as /auth/login)
+    if (user.twoFactorEnabled) {
+      const tempToken = app.jwt.sign(
+        { sub: user.id, email: user.email, role: user.role, purpose: "2fa", mfa: false } satisfies JwtPayload,
+      );
+      
+      return reply.redirect(
+        `${frontendUrl}/oauth/callback?requires2fa=1&tempToken=${encodeURIComponent(tempToken)}`
+      );
     }
 
     const jwt = app.jwt.sign({
@@ -139,9 +178,6 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
       email: user.email,
       role: user.role,
     } satisfies JwtPayload);
-    
-    // Notify user that they logged in via Google
-    await createNotification(user.id, "You have successfully logged in using Google!");
 
     // Redirect back to frontend with token
     return reply.redirect(`${frontendUrl}/oauth/callback?token=${encodeURIComponent(jwt)}`);

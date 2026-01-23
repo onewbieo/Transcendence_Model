@@ -27,7 +27,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       (data && (data.error || data.message)) ||
       (typeof data === "string" ? data : "") ||
       `${res.status} ${res.statusText}`;
-    throw new Error(msg);
+    
+    const err = new Error(msg) as Error & { status?: number; data?: any };
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
 
   return data as T;
