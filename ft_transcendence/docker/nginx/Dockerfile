@@ -1,8 +1,17 @@
+# Stage 1: build frontend
+FROM node:20-alpine AS frontend_build
+WORKDIR /app
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build:docker
+
+# Stage 2: nginx serves frontend + proxies backend
 FROM nginx:alpine
 
-COPY ./conf.d /etc/nginx/conf.d
-COPY ./certs /etc/nginx/certs
+COPY docker/nginx/conf.d /etc/nginx/conf.d
+COPY docker/nginx/certs /etc/nginx/certs
 
-# copy built frontend dist from frontend image
-COPY --from=ft_transcendence-frontend /app/dist /usr/share/nginx/html
-
+COPY --from=frontend_build /app/dist /usr/share/nginx/html

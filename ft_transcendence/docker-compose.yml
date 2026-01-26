@@ -23,19 +23,15 @@ services:
       postgres:
         condition: service_healthy
 
-  frontend:
-    image: ft_transcendence-frontend
-    build: ./frontend
-    command: ["sh", "-c", "echo frontend image built"]
-
   nginx:
-    build: ./docker/nginx
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile 
     depends_on:
       - backend
-      - frontend
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
 
 volumes:
   pgdata:
