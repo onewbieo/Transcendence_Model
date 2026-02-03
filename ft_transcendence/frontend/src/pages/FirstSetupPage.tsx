@@ -17,6 +17,7 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
     
     const normEmail = email.trim().toLowerCase();
     const pw = password;
+    const normName = name.trim();
     
     if (!normEmail) {
       setStatus("Email is required.");
@@ -38,13 +39,18 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
       return;
     }
     
+    if (!normName) {
+      setStatus("Name is required.");
+      return;
+    }
+    
     setLoading(true);
     setStatus("Creating admin...");
 
     try {
       const data = await api("/admin/first-setup", {
         method: "POST",
-        body: JSON.stringify({ email: normEmail, password: pw, name: name.trim() || null }),
+        body: JSON.stringify({ email: normEmail, password: pw, name: normName }),
       });
       
       // backend sends { message: "...", user: {...} }
@@ -73,6 +79,7 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setEmail((v) => v.trim().toLowerCase())}
             type="email"
             style={{ padding: 10 }}
           />

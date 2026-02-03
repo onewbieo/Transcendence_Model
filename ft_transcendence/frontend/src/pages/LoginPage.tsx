@@ -6,16 +6,19 @@ import { useNavigate } from "react-router-dom"; // Correct import for useNavigat
 const TEMP_TOKEN_KEY = "tempToken";
 
 export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
-  const [email, setEmail] = useState("@example.com"); // your test user
-  const [password, setPassword] = useState("password123"); // change to your real test pw
+  const [email, setEmail] = useState(""); // your test user
+  const [password, setPassword] = useState(""); // change to your real test pw
   
   const [status, setStatus] = useState<string>("");
   const [meJson, setMeJson] = useState<any>(null);
   
   const [otp, setOtp] = useState("");
   const [tempToken, setTempToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate(); // Correct hook use
+  
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   
   // If OAUTH flow stored a tempToken, jump straight to 2FA step
   useEffect(() => {
@@ -28,11 +31,32 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("Logging in...");
     setMeJson(null);
+    
+    const normEmail = email.trim().toLowerCase();
+    const pw = password;
+    
+    // frontend checks
+    if (!normEmail) {
+      setStatus("❌ Email is required.");
+      return;
+    }
+    
+    if (!EMAIL_RE.test(normEmail)) {
+      setStatus("❌ Invalid email format.");
+      return;
+    }
+    
+    if (!pw) {
+      setStatus("❌ Password is required.");
+      return;
+    }
+    
+    setLoading(true);
+    setStatus("Logging in...");
 
     try {
-      const res = await login(email, password);
+      const res = await login(normEmail, pw);
       
       // 2FA required path
       if ("requires2fa" in res && res.requires2fa) {
@@ -65,7 +89,18 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         setStatus("❌ Wrong email or password.");
         return;
       }
-      setStatus(`❌ ${err?.message ?? "login failed"}`);
+      else if (err?.status === 429) {
+        setStatus("❌ Too many attempts. Try again in a bit.");
+      }
+      else if (err?.status) {
+        setStatus(`❌ Login failed (HTTP ${err.status}).`);
+      }
+      else {
+        setStatus(`❌ ${err?.message ?? "login failed"}`);
+      }
+    }
+    finally {
+      setLoading(false);
     }
   }
   
@@ -122,6 +157,7 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setEmail((v) => v.trim().toLowerCase())}
               autoComplete="email"
               style={{ padding: 10 }}
             />
@@ -138,8 +174,12 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
             />
           </label>
 
-          <button type="submit" style={{ padding: 10, fontSize: "20px" }}>
-            Login
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ padding: 10, fontSize: "20px" }}
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
           
           <button

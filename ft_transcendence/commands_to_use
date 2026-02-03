@@ -20,14 +20,37 @@ If prisma changes logic then yes you need to built.
 DO NOT NPM RUN DEV while Docker is up. 
 
 
+export KEY="supersecret_key_change_me"
+// Viewing everything in public APIs
+curl -s http://localhost:3000/public/items \
+  -H "x-api-key: $KEY" | jq
 
-Issue 1
-E-mail not checked on creating users.
-E-mail is already checked on creating admin user
+Adding it to the items array
+curl -s -X POST http://localhost:3000/public/items \
+  -H "x-api-key: $KEY" \
+  -H "content-type: application/json" \
+  -d '{"title":"first item","content":"hello"}' | jq
 
-Issue 2
-Password limit was checked on creating user.
-Password limit was not really checked on creating admin
+To view single item
+curl -s http://localhost:3000/public/items/1 \
+  -H "x-api-key: $KEY" | jq
 
-Issue3
-2FA for your OAUTH user ? I mean you can only try enabling and disabling. Logging in doesnt require that haha. 
+Update the item
+curl -s -X PUT http://localhost:3000/public/items/1 \
+  -H "x-api-key: $KEY" \
+  -H "content-type: application/json" \
+  -d '{"title":"updated","content":"changed"}' | jq
+
+DELETE
+url -i -X DELETE http://localhost:3000/public/items/1 \
+  -H "x-api-key: $KEY"
+
+Testing for security
+curl -i http://localhost:3000/public/items
+
+Testing using wrong key
+curl -i http://localhost:3000/public/items \
+  -H "x-api-key: wrong"
+
+
+

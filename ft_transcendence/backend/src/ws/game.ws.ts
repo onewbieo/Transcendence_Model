@@ -25,7 +25,7 @@ const BALL_SPEEDUP = 1.06;
 const BALL_MAX_SPEED = 14;
 
 const SERVE_DELAY_MS = 1200;
-const DISCONNECT_GRACE_MS = 10_000;
+const DISCONNECT_GRACE_MS = 60_000;
 
 // types //
 
@@ -98,8 +98,10 @@ type Room = {
   p1DisconnectTimer?: NodeJS.Timeout;
   p2DisconnectTimer?: NodeJS.Timeout;
   
-  // grace countdown
-  disconnectDeadlineMs?: number;
+  p1DisconnectDeadlineMs?: number;
+  p2DisconnectDeadlineMs?: number;
+  
+  // UI countdown (single ticker is fine)
   disconnectCountdownInterval?: NodeJS.Timeout;
   
   matchDbId: number; // Prisma Match.id 
@@ -199,13 +201,66 @@ function forceCloseCleanup(ws: WebSocket, why: string) {
   room.paused = true;
   room.pauseMessage = `WAITING FOR RECONNECT (${why})`;
   
-  if (!room.disconnectDeadlineMs) {
-    room.disconnectDeadlineMs = Date.now() + DISCONNECT_GRACE_MS;
-  }
+  const now = Date.now();
+  if (room.p1 === null && !room.p1DisconnectDeadlineMs)
+    room.p1DisconnectDeadlineMs = now + DISCONNECT_GRACE_MS;
+  if (room.p2 === null && !room.p2DisconnectDeadlineMs)
+    room.p2DisconnectDeadlineMs = now + DISCONNECT_GRACE_MS;
   
   broadcastState(room);
 
   // if you want: start grace timer here too (optional)
+}
+
+function findRoomByUser(userId: number): { matchId: string; room: Room } | null {
+  for (const [matchId, room] of rooms.entries()) {
+    if (room.p1UserId === userId || room.p2UserId === userId) {
+      return { matchId, room };
+    }
+  }
+  return null;
+}
+
+function removeFromQueue(ws: WebSocket) {
+  waiting.delete(ws);
+}
+
+function msLeftForRole(room: Room, role: Role) {
+  const deadline =
+    role === "P1" ? room.p1DisconnectDeadlineMs : room.p2DisconnectDeadlineMs;
+  if (!deadline)
+    return 0;
+  return Math.max(0, deadline - Date.now());
+}
+
+function minMsLeft(room: Room) {
+  const a = room.p1DisconnectDeadlineMs ? Math.max(0, room.p1DisconnectDeadlineMs - Date.now()) : Infinity;
+  const b = room.p2DisconnectDeadlineMs ? Math.max(0, room.p2DisconnectDeadlineMs - Date.now()) : Infinity;
+  const m = Math.min(a, b);
+  return m === Infinity ? 0 : m;
+}
+
+function cleanupMatch(matchId : string) {
+  const room = rooms.get(matchId);
+  if (!room)
+    return;
+  
+  if (room.interval)
+    clearInterval(room.interval);
+  if (room.serveTimeout)
+    clearTimeout(room.serveTimeout);
+  if (room.p1DisconnectTimer)
+    clearTimeout(room.p1DisconnectTimer);
+  if (room.p2DisconnectTimer)
+    clearTimeout(room.p2DisconnectTimer);
+  if (room.disconnectCountdownInterval)
+    clearInterval(room.disconnectCountdownInterval);
+  
+  rooms.delete(matchId);
+  if (room.p1)
+    socketToMatch.delete(room.p1);
+  if (room.p2)
+    socketToMatch.delete(room.p2);
 }
 
 function send(ws: WebSocket | null, msg: ServerMsg) {
@@ -298,42 +353,6 @@ function beginServe(room: Room, direction: 1 | -1, delayMs = SERVE_DELAY_MS) {
     
     broadcastState(room);
   }, delayMs);
-}
-
-function findRoomByUser(userId: number): { matchId: string; room: Room } | null {
-  for (const [matchId, room] of rooms.entries()) {
-    if (room.p1UserId === userId || room.p2UserId === userId) {
-      return { matchId, room };
-    }
-  }
-  return null;
-}
-
-function removeFromQueue(ws: WebSocket) {
-  waiting.delete(ws);
-}
-
-function cleanupMatch(matchId : string) {
-  const room = rooms.get(matchId);
-  if (!room)
-    return;
-  
-  if (room.interval)
-    clearInterval(room.interval);
-  if (room.serveTimeout)
-    clearTimeout(room.serveTimeout);
-  if (room.p1DisconnectTimer)
-    clearTimeout(room.p1DisconnectTimer);
-  if (room.p2DisconnectTimer)
-    clearTimeout(room.p2DisconnectTimer);
-  if (room.disconnectCountdownInterval)
-    clearInterval(room.disconnectCountdownInterval);
-  
-  rooms.delete(matchId);
-  if (room.p1)
-    socketToMatch.delete(room.p1);
-  if (room.p2)
-    socketToMatch.delete(room.p2);
 }
 
 export function broadcastState(room :Room) {
@@ -541,6 +560,9 @@ export function startGameLoop(room: Room, matchId: string) {
   }, 16);
 }
 
+
+
+
 // main //
 
 export async function gameWs(app: FastifyInstance) {
@@ -736,23 +758,28 @@ export async function gameWs(app: FastifyInstance) {
           send(socket, { type: "match:found", matchId, youAre });
           room.userPaused = false;
              
-          // if both players are back, pause 
+          // clear ONLY the reconnecting side’s grace tracking
+          if (youAre === "P1") {
+            if (room.p1DisconnectTimer)
+              clearTimeout(room.p1DisconnectTimer);
+            room.p1DisconnectTimer = undefined;
+            room.p1DisconnectDeadlineMs = undefined;
+          }
+          else {
+            if (room.p2DisconnectTimer)
+              clearTimeout(room.p2DisconnectTimer);
+            room.p2DisconnectTimer = undefined;
+            room.p2DisconnectDeadlineMs = undefined;
+          }
+
+          // If both are back, stop the countdown UI
           if (room.p1 && room.p2) {
             if (room.disconnectCountdownInterval) {
               clearInterval(room.disconnectCountdownInterval);
               room.disconnectCountdownInterval = undefined;
-    	    }
-    	    // clear the one grace timer (we're reusing p1DisconnectTimer as "room timer")
-    	    if (room.p1DisconnectTimer) {
-    	      clearTimeout(room.p1DisconnectTimer);
-    	      room.p1DisconnectTimer = undefined;
-    	    }
-    	    
-    	    if (room.p2DisconnectTimer) {
-    	      clearTimeout(room.p2DisconnectTimer);
-    	      room.p2DisconnectTimer = undefined;
-    	    }
-            room.disconnectDeadlineMs = undefined;
+            }
+            room.p1DisconnectDeadlineMs = undefined;
+            room.p2DisconnectDeadlineMs = undefined;
           }
           
           room.paused = true;
@@ -915,91 +942,120 @@ export async function gameWs(app: FastifyInstance) {
           room.readyTimeout = undefined;
         }
         
-        const graceAlreadyRunning =
-          typeof room.disconnectDeadlineMs === "number" &&
-          room.disconnectDeadlineMs > Date.now();
-        
-        if (!graceAlreadyRunning) {
-          if (room.p1DisconnectTimer) {
-            clearTimeout(room.p1DisconnectTimer);
-            room.p1DisconnectTimer = undefined;
+        // mark per-role deadline if not already running
+        const now = Date.now();
+        if (info.role === "P1") {
+          if (!room.p1DisconnectDeadlineMs || room.p1DisconnectDeadlineMs <= now) {
+            room.p1DisconnectDeadlineMs = now + DISCONNECT_GRACE_MS;
           }
-          
-          if (room.p2DisconnectTimer) {
-            clearTimeout(room.p2DisconnectTimer);
-            room.p2DisconnectTimer = undefined;
-          }
-          
-          if (room.disconnectCountdownInterval) {
-            clearInterval(room.disconnectCountdownInterval);
-            room.disconnectCountdownInterval = undefined;
-          }
-          
-          room.disconnectDeadlineMs = Date.now() + DISCONNECT_GRACE_MS;
         }
-        
-        // Always pause + show countdown (but don't reset the deadline)
+        else {
+          if (!room.p2DisconnectDeadlineMs || room.p2DisconnectDeadlineMs <= now) {
+            room.p2DisconnectDeadlineMs = now + DISCONNECT_GRACE_MS;
+          }
+        }
+
+        // Always pause + show countdown (based on earliest deadline among missing players)
         room.paused = true;
-        
-        // Immediate message uses remaining time( no more "WAITING 10s" reset)
         {
-          const msLeft = (room.disconnectDeadlineMs ?? 0) - Date.now();
+          const msLeft = minMsLeft(room);
           const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
           room.pauseMessage = `WAITING ${secLeft}s FOR RECONNECT`;
         }
         broadcastState(room);
-        
+
         // Start the countdown interval only once
         if (!room.disconnectCountdownInterval) {
           room.disconnectCountdownInterval = setInterval(() => {
-            const msLeft = (room.disconnectDeadlineMs ?? 0) - Date.now();
+            const msLeft = minMsLeft(room);
             const secLeft = Math.max(0, Math.ceil(msLeft / 1000));
+            
+            // ✅ stop ticker once it reaches 0 (prevents infinite "WAITING 0s")
+            if (secLeft <= 0) {
+              room.pauseMessage = `WAITING 0s FOR RECONNECT`;
+              broadcastState(room);
+              
+              clearInterval(room.disconnectCountdownInterval!);
+              room.disconnectCountdownInterval = undefined;
+              return;
+            }
             
             room.pauseMessage = `WAITING ${secLeft}s FOR RECONNECT`;
             broadcastState(room);
-            
-            if (secLeft <= 0 && room.disconnectCountdownInterval) {
-              clearInterval(room.disconnectCountdownInterval);
+
+            // stop ticker if nobody is missing anymore OR no deadlines remain
+            const someoneMissing = room.p1 === null || room.p2 === null;
+            const anyDeadline = !!room.p1DisconnectDeadlineMs || !!room.p2DisconnectDeadlineMs;
+            if (!someoneMissing || !anyDeadline) {
+              clearInterval(room.disconnectCountdownInterval!);
               room.disconnectCountdownInterval = undefined;
             }
           }, 1000);
         }
 
-        // Start the end of grace timeout only once
-        if (!room.p1DisconnectTimer) {
-          const msLeft = Math.max(0, (room.disconnectDeadlineMs ?? 0) - Date.now());
-          
+        // Start/ensure the per-role end-of-grace timeout
+        if (info.role === "P1") {
+          if (room.p1DisconnectTimer)
+            clearTimeout(room.p1DisconnectTimer);
+          const msLeft = msLeftForRole(room, "P1");
           room.p1DisconnectTimer = setTimeout(() => {
             room.p1DisconnectTimer = undefined;
-            // stop the countdown ticker 
-            if (room.disconnectCountdownInterval) {
-              clearInterval(room.disconnectCountdownInterval);
-              room.disconnectCountdownInterval = undefined;
-            }
-            
+
+            // if P1 is still missing after their own grace, decide outcome
             const p1Missing = room.p1 === null;
             const p2Missing = room.p2 === null;
-            
-            // if someone is still missing, forfeit and end match
-            if (p1Missing || p2Missing) {
-              // winner is the one still present (if both missing, DRAW)
-              if (p1Missing && p2Missing) {
-                void endMatchDraw(room, info.matchId);
-                return;
-              }
-              const winner: Role = p1Missing ? "P2" : "P1";
-              void endMatchFinished(room, info.matchId, winner);
-              return;
+
+            if (!p1Missing) {
+              room.p1DisconnectDeadlineMs = undefined;
+              return; // P1 came back in time
             }
             
-            // both are back by the time grace expires: resume
-            room.paused = false;
-            room.pauseMessage = "";
-            room.disconnectDeadlineMs = undefined;
-            
-            broadcastState(room);
+            room.p1DisconnectDeadlineMs = undefined; 
+
+            const now = Date.now();
+            const p2Expired =
+              room.p2 === null && (
+                room.p2DisconnectDeadlineMs === undefined || room.p2DisconnectDeadlineMs <= now);
+
+            if (p2Expired) {
+              void endMatchDraw(room, info.matchId);
+              return;
+            }
+
+            void endMatchFinished(room, info.matchId, "P2");
           }, msLeft);
         }
+        else {
+          if (room.p2DisconnectTimer)
+            clearTimeout(room.p2DisconnectTimer);
+          const msLeft = msLeftForRole(room, "P2");
+          room.p2DisconnectTimer = setTimeout(() => {
+            room.p2DisconnectTimer = undefined;
+
+            const p1Missing = room.p1 === null;
+            const p2Missing = room.p2 === null;
+
+            if (!p2Missing) {
+              room.p2DisconnectDeadlineMs = undefined;
+              return; // P2 came back in time
+            }
+            
+            room.p2DisconnectDeadlineMs = undefined;
+
+            const now = Date.now();
+            const p1Expired =
+              room.p1 === null &&
+              (room.p1DisconnectDeadlineMs === undefined || room.p1DisconnectDeadlineMs <= now);
+
+            if (p1Expired) {
+              void endMatchDraw(room, info.matchId);
+              return;
+            }
+
+            void endMatchFinished(room, info.matchId, "P1");
+          }, msLeft);
+        }
+
         req.log.info({ code, reason: reason?.toString() }, "ws disconnected");
       });
   });

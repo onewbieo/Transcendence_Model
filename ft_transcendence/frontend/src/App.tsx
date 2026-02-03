@@ -16,7 +16,7 @@ import { api } from "./api";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import Footer from "./components/Footer";
-
+import PublicApiTestPage from "./pages/PublicApiTestPage";
 
 export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getToken());
@@ -137,6 +137,9 @@ export default function App() {
           
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
+            
+            <Route path="/public-test" element={<PublicApiTestPage />} />
+            
           </Routes>
         </div>
         

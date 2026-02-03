@@ -83,6 +83,7 @@ export default function UserCreationPage() {
             }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setEmail((v) => v.trim().toLowerCase())}
             type="email"
           />
         </div>

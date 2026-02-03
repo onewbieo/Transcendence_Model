@@ -141,8 +141,16 @@ export type MatchRow = {
   durationMs: number | null;
 };
 
-export async function matches(): Promise<{ items: MatchRow[]; nextCursor: number | null }> {
-  return api("/matches");
+export async function matches(params?: { take?: number; cursor?: number | null }): Promise<{ items: MatchRow[]; nextCursor: number | null }> {
+  const qs = new URLSearchParams();
+
+  if (params?.take !== undefined)
+    qs.set("take", String(params.take));
+  if (params?.cursor !== undefined && params.cursor !== null)
+    qs.set("cursor", String(params.cursor));
+
+  const url = `/matches${qs.toString() ? `?${qs.toString()}` : ""}`;
+  return api(url);
 }
 
 // Leaderboard
@@ -153,4 +161,23 @@ export type LeaderboardRow = {
 
 export async function leaderboard(): Promise<LeaderboardRow[]> {
   return api("/leaderboard");
+}
+
+export async function publicItemsApiKeyTest() {
+  const res = await fetch("/api/public/items", {
+    headers: {
+      "x-api-key": import.meta.env.VITE_PUBLIC_API_KEY ?? "",
+    },
+  });
+
+  const text = await res.text();
+  let data: any;
+  try {
+    data = text ? JSON.parse(text) : null;
+  }
+  catch { data = text; }
+
+  if (!res.ok)
+    throw new Error((data && (data.error || data.message)) || `${res.status} ${res.statusText}`);
+  return data as { items: any[] };
 }

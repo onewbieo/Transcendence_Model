@@ -47,6 +47,8 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
   
   const stateRef = useRef<Extract<ServerMsg, { type: "game:state" }> | null>(null);
   
+  const connIdRef = useRef(0);
+  
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -59,11 +61,15 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
 
   function send(msg: ClientMsg) {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN)
+      return;
     ws.send(JSON.stringify(msg));
   }
 
   function connect() {
+    connIdRef.current +=1;
+    const myId = connIdRef.current;
+    
     try {
       wsRef.current?.close();
     } catch {}
@@ -75,21 +81,29 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (connIdRef.current !== myId)
+        return;
       setWsStatus("open");
       pushLog("WS open ✅");  
     };
 
     ws.onclose = () => {
+      if (connIdRef.current !== myId)
+        return;
       setWsStatus("closed");
       pushLog("WS closed ❌");
     };
 
     ws.onerror = () => {
+      if (connIdRef.current !== myId)
+        return;
       setWsStatus("error");
       pushLog("WS error ❌ (check backend logs)");
     };
 
     ws.onmessage = (ev) => {
+      if (connIdRef.current !== myId)
+        return;
       let msg: ServerMsg | null = null;
       try {
         msg = JSON.parse(ev.data);
@@ -151,7 +165,15 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
   
   // keyboard controls
   useEffect(() => {
+    function isScrollKey(e: KeyboardEvent) {
+      return e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === " ";
+    }
+    
     function onKeyDown(e: KeyboardEvent) {
+      // stop browser scrolling for arrow keys (and space if you want)
+      if (isScrollKey(e))
+        e.preventDefault();
+        
       if (e.repeat)
         return;
 
@@ -168,19 +190,24 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     }
 
     function onKeyUp(e: KeyboardEvent) {
+      if (isScrollKey(e))
+        e.preventDefault();
+
       if (e.key === "w" || e.key === "ArrowUp")
         send({ type: "game:input", dir: "up", pressed: false });
       if (e.key === "s" || e.key === "ArrowDown")
         send({ type: "game:input", dir: "down", pressed: false });
     }
+    
+    // IMPORTANT: passive:false lets preventDefault actually work
 
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("keydown", onKeyDown, { passive: false });
+    window.addEventListener("keyup", onKeyUp, { passive: false});
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("keydown", onKeyDown as any);
+      window.removeEventListener("keyup", onKeyUp as any);
     };
-  }, [state]);
+  }, []);
 
   // draw canvas
   useEffect(() => {
@@ -238,6 +265,9 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
       <div style={{ marginTop: 12 }}>
         <div>
           WS: <b>{wsStatus}</b>
+          <span style={{ opacity: 0.7 }}>
+            (readyState={wsRef.current?.readyState ?? "null"})
+          </span>
         </div>
         <div>
           Match: <b>{matchId}</b> | You are: <b>{role}</b>
