@@ -140,7 +140,8 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
           twoFactorEnabled: true,
         },
       });
-    } else {
+    }
+    else {
       // Ensure googleSub is linked + optionally update name
       if (!user.googleSub) {
         user = await prisma.user.update({

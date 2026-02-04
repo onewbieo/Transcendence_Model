@@ -43,7 +43,7 @@ export default function App() {
         }
       }
       catch (error: any) {
-        // If backend returned 400, mark first time setup
+        // If request fails, assume not first time (or show an error UI)
           setIsFirstTime(false);
       }
       finally {

@@ -152,7 +152,8 @@ setInterval(() => { // monitoring the health of webSockets
 // helpers //
 function purgeDeadWaiting() {
   for (const ws of waiting) {
-    if (ws.readyState !== WebSocket.OPEN) waiting.delete(ws);
+    if (ws.readyState !== WebSocket.OPEN)
+      waiting.delete(ws);
   }
 }
 
@@ -208,8 +209,6 @@ function forceCloseCleanup(ws: WebSocket, why: string) {
     room.p2DisconnectDeadlineMs = now + DISCONNECT_GRACE_MS;
   
   broadcastState(room);
-
-  // if you want: start grace timer here too (optional)
 }
 
 function findRoomByUser(userId: number): { matchId: string; room: Room } | null {
@@ -559,9 +558,6 @@ export function startGameLoop(room: Room, matchId: string) {
     broadcastState(room);
   }, 16);
 }
-
-
-
 
 // main //
 

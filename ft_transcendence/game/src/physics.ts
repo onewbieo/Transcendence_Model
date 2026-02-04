@@ -29,7 +29,7 @@ const randomServeAngle = (): number =>
 
 export const	resetBall = (ball: Ball, width: number, height: number, direction: 1 | -1) => {
 	ball.x = width / 2;
-	ball.y = height /2;
+	ball.y = height / 2;
 	const angle = randomServeAngle();
 	ball.vx = Math.cos(angle) * BALL_SPEED * direction;
 	ball.vy = Math.sin(angle) * BALL_SPEED;

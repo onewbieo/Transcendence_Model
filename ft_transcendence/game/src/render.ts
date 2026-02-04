@@ -48,7 +48,7 @@ export const	drawGameOver = (
 	winner: "P1" | "P2" | null = null,
 	youAre: "P1" | "P2" | null = null
 ) => {
-	ctx.fillStyle = "white"
+	ctx.fillStyle = "white";
 	ctx.textAlign = "center";
 	
 	// Title 
