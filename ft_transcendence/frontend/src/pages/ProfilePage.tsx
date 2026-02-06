@@ -43,11 +43,11 @@ export default function ProfilePage() {
   }, []);
 
   async function onSave() {
-    setStatus("saving name...");
+    setStatus("updating Name...");
     try {
       await updateMe({ name });     // ✅ PATCH /users/me
       await loadMe();
-      setStatus("Saved ✅");
+      setStatus("Name updated ✅");
     }
     catch (e: any) {
       setStatus(`Save failed ❌ ${e?.message ?? ""}`);
@@ -192,7 +192,7 @@ export default function ProfilePage() {
             padding: "2px",
           }}
         >
-          Save
+          Update Name
         </button>
         <button
           onClick={() => navigate("/")}
