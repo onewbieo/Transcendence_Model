@@ -352,14 +352,12 @@ window.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 
-	const onPause = (msg: string) =>
-	{
+	const onPause = (msg: string) => {
 		serving = true;
 		serveText = msg;
 	};
 
-	const onResume = () =>
-	{
+	const onResume = () => {
 		serving = false;
 		serveText = "";
 	};
@@ -533,7 +531,7 @@ window.addEventListener("DOMContentLoaded", () => {
 		}
 
 		if (!isPaused() && !matched)
-			update();
+		  update();
 		
 		render();
 		
