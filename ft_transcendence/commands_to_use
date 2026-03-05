@@ -17,40 +17,323 @@ docker compose up --build
 
 If prisma changes logic then yes you need to built.
 
-DO NOT NPM RUN DEV while Docker is up. 
+DO NOT NPM RUN DEV while Docker is up. 
 
 
 export KEY="supersecret_key_change_me"
 // Viewing everything in public APIs
 curl -s http://localhost:3000/public/items \
-  -H "x-api-key: $KEY" | jq
+  -H "x-api-key: $KEY" | jq
 
 Adding it to the items array
 curl -s -X POST http://localhost:3000/public/items \
-  -H "x-api-key: $KEY" \
-  -H "content-type: application/json" \
-  -d '{"title":"first item","content":"hello"}' | jq
+  -H "x-api-key: $KEY" \
+  -H "content-type: application/json" \
+  -d '{"title":"first item","content":"hello"}' | jq
 
 To view single item
 curl -s http://localhost:3000/public/items/1 \
-  -H "x-api-key: $KEY" | jq
+  -H "x-api-key: $KEY" | jq
 
 Update the item
 curl -s -X PUT http://localhost:3000/public/items/1 \
-  -H "x-api-key: $KEY" \
-  -H "content-type: application/json" \
-  -d '{"title":"updated","content":"changed"}' | jq
+  -H "x-api-key: $KEY" \
+  -H "content-type: application/json" \
+  -d '{"title":"updated","content":"changed"}' | jq
 
 DELETE
 url -i -X DELETE http://localhost:3000/public/items/1 \
-  -H "x-api-key: $KEY"
+  -H "x-api-key: $KEY"
 
 Testing for security
 curl -i http://localhost:3000/public/items
 
 Testing using wrong key
 curl -i http://localhost:3000/public/items \
-  -H "x-api-key: wrong"
+  -H "x-api-key: wrong"
 
+
+
+
+
+Ok, Ask Each Team member individually to explain
+- Their role in the Project(Product owner, Product Manager, Technical Lead, Developers)
+- Their specific contributions and what they worked on
+- At least one feature or module they personally implemented
+
+Can each team member clearly explain their role and contributions ? 
+
+README Verification
+Verify README and contains all required sections:
+- Project name and description
+- Team members with assigned roles(PO, PM, Tech Lead, Developers)
+- Project management approach(how work was organized)
+- Technologies used with justifications
+- Database schema
+- List of features and who implemented them
+- Chosen modules with justifications and point calculation
+- Individual contributions of each member
+
+Project Coherence
+Ask at least 2 different team members to explain:
+- The project concept and what it does
+- The main technologies used and why
+- How the team coordinated the work
+
+Can different team members explain the project coherently ? 
+
+Git history
+Verify team collaboration in Git
+- Repo shows commits from all team members
+- Commit messages are clear and meaningful
+- Work is distributed among team members
+
+Ask a team member to show the commit history.
+Does the Git history show proper team collaboration ? 
+
+Architecture Components
+Does the project have all three required components:
+- Frontend
+- Backend
+- Database
+
+Ask different team members to briefly explain each component
+
+Deployment
+Can the entire application be deployed with a containerization solution (Docker) using a single command ? 
+
+Ask a team member to demonstrate the deployment.
+
+Browser Compatibility
+Does the application run on the latest stable Google Chrome without errors or warnings in the console ? 
+Open Chrome DevTools and verify the console.
+Minor warnings from 3rd party libraries may be acceptable if explained.
+
+Privacy Policy and Terms of Service
+Are both Privacy Policy and Terms of Service pages accessible and contain relevant content ? 
+
+These pages must:
+- be easily accessible from the application (footer links)
+- contain relevant and appropriate content for the project
+- Not be placeholder or empty pages
+
+Technical Requirements
+1) Frontend Responsiveness
+Is the frontend clear, responsive, and accessible across different devices? (Need to check this one)
+Test on at least 2 different screen sizes(desktop and mobile / tablet)
+The interface should adapt properly to different screen sizes and remain usable on both desktop and mobile devices.
+
+2)Styling Solution
+Is a CSS framework or styling solution used ?      (Basic inline styling with react)
+  
+Ask a team member to show examples of its usage in the code.
+The project must use a modern CSS framework or styling solution.
+Plain CSS alone is not sufficient.
+
+3)Environment Variables
+Are credentials properly secured:
+- .env file exists and is in .gitignore
+- .env.example file is provided
+- No sensitive credentials in the repository
+
+Verify these security practices are followed.
+Any credentials, API keys, or sensitive information found in the repository (outside of .env) will result in immediate project failure.
+
+4)Database Design (OK)
+Does the database have a clear schema with well-defined relations ? 
+
+Ask a team member to show and explain the database schema(from README or directly)
+
+The database should be properly structured with clear relationships between tables / collections.
+
+5)Authentication Security (OK)
+Does the user management system provide secure authentication with:
+- E-mail and password signup / login  (Signup / login endpoints)
+- Properly hashed and salted passwords (password you typed is hashed) (compare the entered password with the stored hashed upon login)
+
+Ask the team to explain their password security implementation.
+
+Passwords must never be stored in plain text.The team should be able to explain their hashing / salting approach. 
+
+6)Form Validation (OK) (WILL DOUBLE CHECK)
+Are all forms and user inputs validated in both fronend AND backend ? 
+
+Test with invalid inputs(empty fields, wrong formats, SQL injection attempts, XSS attempts, etc) to verify validation.
+
+Both client side and server side validation must be present.
+Server-side validation is critical for security.
+
+7)Secure Connections (OK)
+Is HTTPS used for all backend connections?
+
+Verify the connecton is secure(check browser address bar)
+
+All communications between frontend and backend must be encrypted using HTTPS.
+
+8)Modules Verification (FAIL)
+
+Review the README and modules section:
+- List all claimed modules(Major = 2pts, Minor = 1pt)
+- Calculate the total points
+
+Does the project claim at least 14 points from modules ? 
+
+The team must have selected modules totalling at least 14 points.
+This is verified in the README before testing the actual implementation.
+
+9)Major Modules (After documentation i'll go verify it)
+For EACH Major Module (2 points) claimed:
+- Ask the team to demonstrate it
+- Verify its fully implemented and functional
+- Check it meets Major module complexity requirements
+- Confirm it adds real value to the project
+- Verify module dependencies are met
+
+Are all claimed Minor modules properly implemented and functional ? 
+IMPORTANT: Only count working modules
+
+You must verify EACH major module individually. A module that doesnt work or doesnt meet the requirements specified in the subject PDF gets 0 points.
+
+10)Minor Modules
+For EACH Minor module (1 point) claimed:
+- Ask the team to demonstrate it
+- Verify its fully implemented and functional
+- Check it adds meaningful value to the project
+- Verify module dependencies are met
+
+Are all claimed Minor modules properly implemented and functional
+IMPORTANT: Only count working modules
+
+You must verify EACH major module individually. A module that doesnt work or doesnt meet the requirements specified in the subject PDF gets 0 points.
+
+11)Modules of Choice (OK I DONT HAVE THIS)
+If custom "Modules of choice" are claimed:
+- Verify proper justification in README explaining:
+      - Why they chose this module
+      - What technical challenges it addresses
+      - How it adds value to the project
+      - Why it deserves Major / Minor status
+- Confirm its not a shortcut (must demonstrate technical complexity)
+- Check relevance to project context
+- Ensure technical skill is demonstrated
+
+Are custom modules properly justified and implemented?
+
+Custom modules must be substantial and demonstrate real technical skill.
+Trival features or shortcuts will not be accepted.
+
+12)Code Quality (Just let them review anything they want, maybe bring them through the flow a bit)
+Assess the overall code quality, organization and team understanding.
+
+Code Structure
+Is the code reasonably well-organised and readable?
+
+- Clear file / folder structure
+- Code is understandable
+- No major code quality issues
+- Consistent coding style
+
+Review some code files to assess organization
+The code doesnt need to be perfect, but it should be organised and maintainable. Major code quality issues may indicate problems.
+
+13)Technical Decisions (Think of a thing to say)
+Can the team explain their technical choices?
+Ask about:
+- Why they choose their tech stack
+- How they structured the application
+- Challenges faced and solutions implemented
+- Trade-offs made during development
+
+Does the team demonstrate understanding of their project?
+
+The team should be able to justify their technical decisions and demonstrate understanding of the technologies they used.
+
+14)TeamWork Evidence (This one can go figure out)
+Is there evidence of effective teamwork?
+
+- All members contributed (check git history)
+- Team members can explain each other's work
+- Work appears coordinated and integrated
+- README shows clear work distribution
+- No single person did all the work
+
+Does the project demonstrate effective team collaboration
+This is a group project. All members must have contributed meaningfully.
+
+15)Functionality (Test your program)
+Test the overall functionality and stability of the application.
+
+Stability and Functionality
+Is the application functional and reasonably stable ? 
+- No critical bugs or crashes during demonstration
+- Main features work as expected
+- Basic error handling is present
+- User experience is acceptable
+- Multi-user support works(multiple users can use the app simultaneously)
+
+Test the main features of the application.
+
+The application should be stable enough for a demonstration.
+Minor bugs are acceptable, but critical failures are not.
+
+Overall Quality
+Does the project demonstrate effort and learning?
+
+- Shows understanding of web development concepts
+- Goes beyond minimal requirements
+- Team learned new technologies or concepts
+- Project shows creativity or interesting implementation
+- The project concept is well-executed
+
+Does the project reflect genuine effort and learning?
+This project is about learning and demonstrating skills.
+The project should show that the team invested effort and learned.
+
+16)Final Verification
+Final checks to ensure the project meets all requirements.
+
+Final Module Count
+Final module score calculation:
+- Count ONLY the modules that were successfully demonstrated and work produced
+- Major modules = 2 points each
+- Minor modules = 1 point each
+- Non-functional or incomplete modules = 0 points
+
+Does the total of VALIDATED modules reach at least 14 points?
+
+CRITICAL: Be fair but strict. Only count modules that actually work and meet the requirements specified in the subject PDF.
+If the project does not reach 14 points from validated modules, it fails.
+
+Project Success
+Overall assessment:
+
+- Is the mandatory part complete and functional ?
+- Did all team members contribute meaningfully ?
+- Can the team explain their work and decisions ?
+- Does the project meet the subject requirements ?
+- Is the README complete and accurate ? 
+
+Would you consider this a successful group project ?
+This is your final assessment of whether the project meets the standards expected for this assignement.
+
+17)Bonus
+
+Extra Modules
+You must now verify any extra modules beyond the required 14 points.
+For each extra module:
+- Verify its fully functional
+- Confirm it meets the module requirements from the subject PDF
+- Check that it adds value to the project
+- Ensure proper justification in README
+
+Count the number of extra validated modules:
+- Major = 2 bonus points
+- Minor = 1 bonus point
+
+A module is considered valid under the following criteria:
+- No issues with the proper functioning of the module.
+- It meets all requirements specified in the subject PDF
+- No errors are visible
+- A comprehensive explanation allows for detailed understanding.
 
 

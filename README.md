@@ -1,192 +1,259 @@
-FT_TRANSCENDENCE README
+*This project has been created as part of the 42 curriculum by <login1>, <login2>, <login3>, <login4>[, <login5>].*
 
-A full-stack real-time web application built for the 42 School ft_transcendence capstone.
-The project delivers a secure production-style platform featuring user authentication, profiles, matchmaking, match history, leaderboards and a real-time 1v1 Pong game powered by WebSockets.
-This repository represents a single consolidated README describing the entire system (backend, frontend and game engine).
+# ft_transcendence - Surprise
 
-Project Management
+## Description
+`ft_transcendence` is a full-stack web application built around a real-time multiplayer Pong experience, with user authentication, role-based administration, match tracking, notifications, and a secured public API.
 
-Work Organization
-We organized the project around the mandatory core (frontend + backend + database + game) first, then added modules on top (OAuth, 2FA, rate limiting, etc.).
-Work was split into small, testable tasks with identified owners and simple acceptance criteria.
-    • Planning cadence: weekly discussions on updates.
-    • Task breakdown method: each teammate chooses which module he wants to work on.
-    • Definition of done:
-        ◦ Feature implemented and works end-to-end
-        ◦ Validations added (frontend + backend where applicable)
-        ◦ No console errors in Chrome
-        ◦ Code reviewed (when possible)
-        ◦ Documented in README / notes
-Tools Used
-    • Source control: Git + GitHub
-    • Task tracking: shared doc
-    • Code review: review after merge
-Communication
-    • Main channel: Telegram 
-    • Meetings:
-        ◦ Weekly planning meeting: informal / as needed
-        ◦ Progress sync: weekly updates
-    • How we handled blockers:
-        ◦ Blocker raised in Telegram
-        ◦ Tech Lead/owner proposes solution
-        ◦ If urgent, quick call; otherwise documented decision in shared doc
-        
-Milestones and Timeline
-We followed milestone-based delivery to avoid late integration issues.
-    • Milestone 1 — Foundation
-        ◦ Repo setup, Docker compose, database connection
-        ◦ Base frontend + backend skeleton
-    • Milestone 2 — Authentication & User Base
-        ◦ JWT auth, login, protected routes
-        ◦ User profile basics
-    • Milestone 3 — Game Core
-        ◦ WebSocket layer, game loop, basic gameplay
-        ◦ Match lifecycle and persistence
-    • Milestone 4 — Polishing & Modules
-        ◦ OAuth, 2FA, rate limiting, uploads, UI cleanup, etc
-        ◦ README + Terms/Privacy + evaluation readiness
-        
-Risk Management
-Common risks for this project were identified early:
-    • Integration risk (frontend/backend/game): mitigated by early end-to-end tests
-    • Real-time stability (disconnects/latency): mitigated by reconnection rules + server authoritative state
-    • Scope creep: mitigated by prioritizing mandatory requirements and freezing features near the end
-    • Evaluation risk: mitigated by documenting architecture, keeping README honest, and preparing demos
-How Contributions Were Verified
-    • Each feature/module was validated by:
-        ◦ Running through the UI flow
-        ◦ Checking database state (Prisma/Postgres)
-        ◦ Testing real-time behavior with multiple clients
-        ◦ Confirming Docker “single command” run works
-    • If a feature could not be made stable, it was either fixed or not claimed as a module
+Core goal:
+- deliver a working multi-user web platform (frontend + backend + database)
+- support real-time gameplay between remote players
+- implement selected subject modules in a coherent way
 
-Features Overview
-Core Platform
-    • Secure authentication (JWT)
-    • OAuth Login (Google)
-    • User profiles & avatars
-    • Roles (admin / user)
-    • Match history and leaderboard
-    • Rate limited and validated API
-Real-Time Game
-    • 1v1 Pong game (remote game play)
-    • Authoritative server game loop
-    • WebSocket communication
-    • Input prediction & reconciliation (server driven)
-    • Reconnection handling
-    • Match lifecycle states: ONGOING / FINISHED / DRAW / PENDING
-    • Race to 8 scoring system
-Infrastructure
-    • Dockerized services
-    • PostgreSQL database
-    • Prisma ORM with migrations
-    • Environment driven configuration
+Primary features:
+- secure auth with email/password (hashed password)
+- OAuth 2.0 (Google) login
+- optional 2FA (TOTP)
+- user profile management + avatar upload
+- admin/user role permissions and admin CRUD
+- real-time 1v1 Pong over WebSockets
+- match history + leaderboard
+- secured public API with API key + rate limiting + docs
+- notifications for key actions
 
-Tech Stack
-Backend
-    • Node.js + Typescript
-    • Fastify (HTTP + WebSocket server)
-    • Prisma ORM
-    • PostgreSQL
-    • JWT Authentication
-    • OAUTH (Google)
-    • 2FA (TOTP)
-Frontend
-    • React + Typescript
-    • Vite
-    • WebSocket client for real-time gameplay
-    • Modular page based architecture
-DevOps
-    • Docker & docker-compose
-    • Environment-based secrets
-    • Prisma migrations
+## Instructions
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 20+ and npm (for local non-docker development)
+- Google OAuth credentials (if testing OAuth flow)
 
-Project Structure
-
+### Project structure
+```text
 ft_transcendence/
-├── backend/        # Fastify API, authentication, 
-│   │			database access, WebSocket server
-│   ├── prisma/     # Prisma schema and migrations
-│   └── src/        # Routes, services, utilities,
-│   				WebSocket handlers
-├── frontend/       # React (Vite) client application
-│   └── src/        # Pages, components, API client
-├── game/           # Pong game engine (logic, 
-│				physics, rendering)
-├── docker/         # Docker-related configuration
+├── backend/
+├── frontend/
+├── game/
+├── docker/
 └── docker-compose.yml
+```
 
-Database Design
-Managed with Prisma. Key models include:
-    • User
-    • Match
-    • Notification
-    • PublicItem
-All schema changes are tracked through migrations under prisma/migrations.
+### Environment configuration
+Important files:
+- Local backend env: `ft_transcendence/backend/.env` (local dev)
+- Docker backend env template in repo: `ft_transcendence/backend/env.docker`
+- Docker backend env used by compose: `ft_transcendence/backend/.env.docker`
+- Frontend env: `ft_transcendence/frontend/.env`
 
-Authentication Flow
-    • JWT-based session handling
-    • Secure password hashing (bcrypt)
-    • OAuth sign-in (Google)
-    • Optional 2FA using TOTP (Speakeasy)
-    • Role-aware access control
+If `.env.docker` does not exist, create it from `env.docker`:
+```bash
+cd ft_transcendence/backend
+cp env.docker .env.docker
+```
 
-Game Architecture
-    • Server-authoritative Pong engine
-    • Deterministic tick loop
-    • Client sends input only, never state
-    • Server broadcasts authoritative game state
-    • Reconnection logic with timeout rules
-    • Draw connection only triggered when both players disconnect
+Then update secrets/keys in your local env files (do not commit real secrets).
 
-Getting Started
-Prerequisites
-    • Docker
-    • Docker Compose
-Setup
-    • git clone <repo>
-    • cd ft_transcendence
-    • docker compose up –build
+### Run with Docker (HTTPS)
+```bash
+cd ft_transcendence
+docker compose up --build
+```
 
-Services (Docker)
-    • Nginx (reverse proxy + TLS termination):
-        ◦ HTTP: http://localhost:8080 (redirects to HTTPS)
-        ◦ HTTPS: https://localhost:8443 (main entrypoint)
-    • Frontend:
-        ◦ Served by Nginx over HTTPS (https://localhost:8443)
-    • Backend (Fastify):
-        ◦ Exposed through Nginx:
-            ▪ /api/ - backend
-            ▪ /ws/ - backend
-            ▪ /uploads/ - backend 
-    • PostgreSQL:
-        ◦ Exposed on host: localhost:5433 (maps to container 5432)
-Services (Local development, non-Docker)
-    • Backend (HTTP): http://localhost:3000
-    • Frontend (HTTP): http://localhost:5173
+Endpoints:
+- `http://localhost:8080` (redirect to HTTPS)
+- `https://localhost:8443` (main app entrypoint)
 
-Development Notes
-    • Local development uses HTTP for simplicity.
-    • HTTPS is provided by Nginx in Docker (TLS termination). The backend runs HTTP internally.
-    • WebSocket pause behavior may occur only in local development single-player mode when the browser tab loses focus. This does not affect real multiplayer games.
-    • Prisma migrations reflect iterative schema evolution
+### Run local development (HTTP)
+Terminal 1:
+```bash
+cd ft_transcendence
+docker compose up -d postgres
+cd backend
+npm install
+npm run dev
+```
 
-42 Subject Compliance
-This project fulfills the mandatory requirements of ft_transcendence:
-    • Secure authentication system
-    • Real-time multiplayer game
-    • Remote players
-    • Web-based game
-    • Multi-user support
-    • Persistent match data
-    • Leaderboard
-    • Game statistics and match history
-    • Modern frontend framework
-    • Backend framework
-    • ORM for database
-    • HTTPS provided via reverse proxy (Nginx)
-    • OAuth
-    • 2FA
-    • Public API
-    • Notification system
-    • Advanced permissions system 
+Terminal 2:
+```bash
+cd ft_transcendence/frontend
+npm install
+npm run dev
+```
+
+Endpoints:
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
+
+Note:
+- Vite proxies `/api`, `/ws`, and `/uploads` to backend in local mode.
+- Do not run `npm run dev` frontend/backend at the same time as full Docker HTTPS stack.
+
+## Team Information
+Update this section with your final real team data before submission.
+
+| Member Login | Assigned Role(s) | Responsibilities |
+|---|---|---|
+| `<login1>` | Product Owner, Developer | Product vision, backlog priority, feature validation, contributor |
+| `<login2>` | Project Manager / Scrum Master, Developer | Planning, tracking, risk/blocker follow-up, contributor |
+| `<login3>` | Technical Lead / Architect, Developer | Architecture decisions, code quality, critical reviews, contributor |
+| `<login4>` | Developer | Feature implementation, testing, documentation |
+| `<login5>` (optional) | Developer | Feature implementation, testing, documentation |
+
+## Project Management
+### Work organization
+- mandatory core delivered first (frontend/backend/db/game), modules layered afterward
+- weekly syncs + ad hoc blocker discussions
+- tasks split into small implementable units with owner and acceptance criteria
+
+### Tools
+- Git + GitHub (version control)
+- shared planning board/doc (task tracking)
+- direct code review before/after merges
+
+### Communication channels
+- primary async channel: Telegram
+- quick calls for urgent blockers
+
+## Technical Stack
+### Frontend
+- React + TypeScript + Vite
+- React Router
+
+Justification:
+- fast iteration for SPA pages and realtime integration
+- clean separation of pages, API layer, and auth/ws helpers
+
+### Backend
+- Fastify + TypeScript
+- `@fastify/websocket`, `@fastify/jwt`, `@fastify/rate-limit`, `@fastify/swagger`
+
+Justification:
+- high-performance HTTP + WebSocket in one service
+- clean plugin/decorator architecture for auth and admin checks
+
+### Database
+- PostgreSQL
+- Prisma ORM + migrations
+
+Justification:
+- relational schema fits users/matches/notifications
+- schema migrations and typed queries simplify evolution
+
+### Infrastructure
+- Docker Compose (single command orchestration)
+- Nginx reverse proxy with TLS termination
+
+## Database Schema
+Core models:
+- `User`: account/auth/profile/role/OAuth/2FA fields
+- `Match`: player ids, scores, status, winner, duration
+- `Notification`: user notifications
+- `PublicItem`: public API demo content
+
+Relationships:
+- `User` 1:N `Match` as `player1`
+- `User` 1:N `Match` as `player2`
+- `User` 1:N `Match` as `winner`
+- `User` 1:N `Notification`
+
+Schema source:
+- `ft_transcendence/backend/prisma/schema.prisma`
+
+## Features List
+| Feature | Description | Team Member(s) |
+|---|---|---|
+| Email/password auth | Signup/login with hashed password and JWT | `<login?>` |
+| OAuth 2.0 (Google) | Login via Google with callback handling | `<login?>` |
+| 2FA (TOTP) | Setup, enable, verify, disable 2FA | `<login?>` |
+| Profiles + avatar | Update profile data and upload avatar | `<login?>` |
+| Role permissions | ADMIN/USER guards and admin CRUD actions | `<login?>` |
+| Realtime Pong | WebSocket queue, match start, live state sync | `<login?>` |
+| Reconnect flow | Grace period, reconnect, match resolution | `<login?>` |
+| Match history + leaderboard | Match storage/query and ranking display | `<login?>` |
+| Public API | API key + rate limit + CRUD + docs | `<login?>` |
+| Notifications | Notification creation for key actions | `<login?>` |
+| Privacy + Terms pages | Accessible legal pages in app footer | `<login?>` |
+
+## Modules
+### Claimed modules and points
+| Category | Module | Type | Points | Implementation summary | Team Member(s) |
+|---|---|---:|---:|---|---|
+| Web | Framework for frontend + backend | Major | 2 | React frontend + Fastify backend | `<login?>` |
+| Web | ORM | Minor | 1 | Prisma with PostgreSQL migrations | `<login?>` |
+| Web | Realtime features | Major | 2 | WebSocket Pong + connection/reconnect handling | `<login?>` |
+| Web | Public API (API key + rate limit + docs + CRUD endpoints) | Major | 2 | `/public/items` CRUD + x-api-key + rate limit + `/api/docs` | `<login?>` |
+| Web | Complete notification system | Minor | 1 | Notifications integrated across CRUD-related user flows | `<login?>` |
+| User Management | Game statistics and match history | Minor | 1 | Match history + leaderboard + wins aggregation | `<login?>` |
+| User Management | OAuth 2.0 | Minor | 1 | Google OAuth endpoints and frontend callback flow | `<login?>` |
+| User Management | Advanced permissions system | Major | 2 | ADMIN/USER roles + admin user CRUD endpoints | `<login?>` |
+| User Management | Complete 2FA | Minor | 1 | TOTP setup/enable/verify/disable workflow | `<login?>` |
+| Gaming & UX | Complete web-based game | Major | 2 | Browser Pong with clear rules and win conditions | `<login?>` |
+| Gaming & UX | Remote players | Major | 2 | 2-player remote realtime gameplay + reconnection logic | `<login?>` |
+
+Claimed total: **17 points**
+
+Note:
+- We count the framework major only once (we do not additionally count frontend/backend framework minors).
+- Final module claim is validated during peer evaluation demo.
+
+## Individual Contributions
+Fill this section with a detailed per-member breakdown before final submission.
+
+### `<login1>`
+- Implemented:
+- Challenges:
+- How solved:
+
+### `<login2>`
+- Implemented:
+- Challenges:
+- How solved:
+
+### `<login3>`
+- Implemented:
+- Challenges:
+- How solved:
+
+### `<login4>`
+- Implemented:
+- Challenges:
+- How solved:
+
+### `<login5>` (optional)
+- Implemented:
+- Challenges:
+- How solved:
+
+## Mandatory Requirement Coverage
+- Web application with frontend + backend + database: yes
+- Multi-user support: yes
+- Docker single-command deployment: yes (`docker compose up --build`)
+- Chrome compatibility: target browser for validation
+- No console warnings/errors in demo flows: required internal check
+- Accessible Privacy Policy and Terms of Service pages: implemented and linked
+- Input validation frontend + backend: implemented in key forms/routes
+- Backend HTTPS: provided via Nginx TLS reverse proxy in Docker mode
+
+## Resources
+### Technical references
+- Fastify docs: https://fastify.dev/docs/latest/
+- Prisma docs: https://www.prisma.io/docs
+- Vite docs: https://vite.dev/guide/
+- React docs: https://react.dev/
+- WebSocket RFC overview: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API
+- PostgreSQL docs: https://www.postgresql.org/docs/
+- Google OAuth/OpenID Client docs: https://github.com/panva/node-openid-client
+- Speakeasy (TOTP): https://github.com/speakeasyjs/speakeasy
+
+### AI usage disclosure
+AI tools were used to:
+- accelerate repetitive documentation drafting
+- generate test/checklist ideas
+- refine prompt-driven code review and edge-case thinking
+
+AI-generated output was always:
+- reviewed by team members
+- tested before integration
+- discussed with peers when behavior/logic was critical
+
+No AI-generated code was accepted blindly.
+

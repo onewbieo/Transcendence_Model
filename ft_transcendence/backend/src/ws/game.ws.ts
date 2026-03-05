@@ -514,7 +514,7 @@ export function startGameLoop(room: Room, matchId: string) {
       }
 
       // scoring (out of bounds)
-      if (room.ball.x + BALL_RADIUS < 0) {
+      if (room.ball.x + BALL_RADIUS < 0) {if (!room.serveInProgress || !room.serveStartAtMs || !room.serveDelayMs)
         // P2 Scores
         room.scoreP2 += 1;
         if (!room.isEnding && room.scoreP2 >= MAX_SCORE) {

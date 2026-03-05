@@ -13,6 +13,8 @@ ft_transcendence/backend/.env
 ft_transcendence/backend/.env.*
 ft_transcendence/frontend/.env
 ft_transcendence/frontend/.env.*
+!**/.env.example
+!**/.env.*.example
 
 # Logs
 *.log
@@ -39,6 +41,5 @@ ft_transcendence/unused_codes_frontend/
 .DS_Store
 .vscode/
 .idea/
-
 
 
