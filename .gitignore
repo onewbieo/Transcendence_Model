@@ -32,11 +32,6 @@ ft_transcendence/backend/**/*.js.map
 ft_transcendence/backend/**/*.d.ts
 ft_transcendence/backend/**/*.d.ts.map
 
-# Your unused code folders
-ft_transcendence/unused_codes_backend/
-ft_transcendence/backend/src/routes/unused codes/
-ft_transcendence/unused_codes_frontend/
-
 # OS / editor junk
 .DS_Store
 .vscode/
