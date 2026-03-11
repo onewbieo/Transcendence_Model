@@ -71,47 +71,49 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "48px auto", padding: 24 }}>
-      <h1>Create Admin User</h1>
-      <form onSubmit={handleFirstSetup} noValidate style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Email</span>
+  <div className="px-4 py-8 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="px-2 py-1 pt-5 pb-5 mx-auto w-fit border-3 border-slate-300">
+      <h1 className="text-center font-bold">Create Admin User</h1>
+      <form onSubmit={handleFirstSetup} noValidate className="grid gap-3">
+        <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="w-20 text-right">Email</span>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onBlur={() => setEmail((v) => v.trim().toLowerCase())}
             type="email"
-            style={{ padding: 10 }}
+            className="w-56 border px-2 py-1"
           />
         </label>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Password</span>
+        <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="w-20 text-right">Password</span>
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
-            style={{ padding: 10 }}
+            className="w-56 border px-2 py-1 "
           />
         </label>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Name</span>
+        <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="w-20 text-right">Name</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             type="text"
-            style={{ padding: 10 }}
+            className="w-56 border px-2 py-1"
           />
         </label>
 
-        <button type="submit" style={{ padding: 10 }} disabled={loading}>
+        <button type="submit" className="px-2 py-1 w-fit mx-auto border text-xs sm:text-sm md:text-base lg:text-lg hover:bg-red-400" disabled={loading}>
           {loading ? "Creating..." : "Create Admin"}
         </button>
       </form>
 
-      <p>{status}</p>
+      <p className="mt-2 text-center font-bold text-xs sm:text-sm md:text-base lg:text-lg">{status}</p>
     </div>
+  </div>
   );
 }
 

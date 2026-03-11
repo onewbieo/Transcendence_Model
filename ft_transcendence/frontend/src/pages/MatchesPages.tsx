@@ -56,58 +56,68 @@ export default function MatchesPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 900, margin: "48px auto", padding: 24 }}>
-      <h1>Match History</h1>
+  <div className="px-4 py-2 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="px-2 py-1">
+      <h1 className="text-center font-extrabold w-fit border mx-auto px-2 py-1 hover:bg-red-400 text-xs sm:text-sm md:text-base lg:text-lg">Match History</h1>
 
-      <button onClick={() => navigate("/")}>Back to Home</button>
+      <button
+        onClick={() => navigate("/")}
+        className="mt-2 border-4 px-2 py-1 font-bold hover:bg-pink-400 text-xs sm:text-sm md:text-base lg:text-lg"
+      >
+        Back to Home</button>
 
-      <p style={{ marginTop: 12, fontSize: "22px" }}>Status: {status}</p>
+      <p className="flex gap-2 mt-2 ">
+        <span className="text-sky-400 text-xs sm:text-sm md:text-base lg:text-lg">Status:</span>
+        <span className="text-red-400 font-bold text-xs sm:text-sm md:text-base lg:text-lg">{status}</span>
+      </p>
 
       {rows.length === 0 ? (
-        <p style={{ fontSize: "22px" }}>No matches yet.</p>
+        <p className="font-bold text-xs sm:text-sm md:text-base lg:text-lg">No matches yet.</p>
       ) : (
         <>
-          <table style={{ width: "100%", marginTop: 12, borderCollapse: "collapse" }}>
+        <div className="mt-2 pb-5 overflow-x-auto">
+          <table className="mt-2 border-4 w-full min-w-[760px] text-left">
             <thead>
               <tr>
-                <th align="left">Id</th>
-                <th align="left">Created</th>
-                <th align="left">Status</th>
-                <th align="left">Score</th>
-                <th align="left">Winner</th>
-                <th align="left">Duration</th>
+                <th className="px-1 py-1 text-xs sm:text-sm md:text-base lg:text-lg">Id</th>
+                <th className="px-1 py-1 text-xs sm:text-sm md:text-base lg:text-lg">Created</th>
+                <th className="px-1 py-1 text-xs sm:text-sm md:text-base lg:text-lg">Status</th>
+                <th className="px-1 py-1 text-xs sm:text-sm md:text-base lg:text-lg">Score</th>
+                <th className="px-1 py-1 text-xs sm:text-sm md:text-base lg:text-lg">Winner</th>
+                <th className="px-1 py-1 text-xs sm:text-sm md:text-base lg:text-lg">Duration</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((m) => (
-                <tr key={m.id} style={{ borderTop: "1px solid #333" }}>
-                  <td>{m.id}</td>
-                  <td>{new Date(m.createdAt).toLocaleString()}</td>
-                  <td>{m.status}</td>
-                  <td>{m.player1Score} - {m.player2Score}</td>
-                  <td>{m.winnerId ?? "DRAW"}</td>
-                  <td>{m.durationMs ? `${Math.round(m.durationMs / 1000)}s` : "-"}</td>
+                <tr key={m.id} className="border border-slate-300">
+                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">{m.id}</td>
+                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">{new Date(m.createdAt).toLocaleString()}</td>
+                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">{m.status}</td>
+                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">{m.player1Score} - {m.player2Score}</td>
+                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">{m.winnerId ?? "DRAW"}</td>
+                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">{m.durationMs ? `${Math.round(m.durationMs / 1000)}s` : "-"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
 
-          <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+          <div className="mt-4 px-2 py-1 text-center w-fit mx-auto border-2 border-orange-400 font-bold hover:bg-orange-400 text-xs sm:text-sm md:text-base lg:text-lg">
             {nextCursor !== null ? (
               <button
                 onClick={loadNext}
                 disabled={loading}
-                style={{ padding: 10, fontSize: "16px", minWidth: 180 }}
               >
                 {loading ? "Loading..." : "Next page"}
               </button>
             ) : (
-              <div style={{ opacity: 0.7 }}>No more matches.</div>
+              <div className="opacity-70 text-xs sm:text-sm md:text-base lg:text-lg">No more matches.</div>
             )}
           </div>
         </>
       )}
     </div>
+  </div>
   );
 }
 

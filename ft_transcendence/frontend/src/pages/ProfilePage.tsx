@@ -147,108 +147,120 @@ export default function ProfilePage() {
     meUser?.avatarUrl ? meUser.avatarUrl : "/default-avatar.png";
 
   return (
-    <div style={{ maxWidth: 720, margin: "48px auto", padding: 24 }}>
-      <h1>Profile</h1>
+  <div className="px-2 py-1 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="w-fit px-2 py-1 mx-auto border-2">
+      <h1 className="text-center font-extrabold">Profile</h1>
       
-      <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 12 }}>
+      <div className="mt-2 flex justify-center">
         <img
           src={avatarSrc}
           alt="avatar"
           width={96}
           height={96}
-          style={{ borderRadius: 12, objectFit: "cover", border: "1px solid #333" }}
+          className="border border-4 rounded-xl"
         />
+      </div>
 
-      <div style={{ display: "grid", gap: 8 }}>
         <input
+          id="avatar-file"
           type="file"
           accept="image/png, image/jpeg, image/webp"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          style={{ fontSize: "15px" }}
+          className="hidden"
         />
-        <button
-          onClick={onUploadAvatar}
-          style={{ fontSize: "15px", width: 195 }}>
-          Upload Avatar
-        </button>
-      </div>
-    </div>
+        
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <label
+            htmlFor="avatar-file"
+            className="px-2 py-1 cursor-pointer border-3 border-yellow-400 hover:bg-yellow-400 font-bold text-xs sm:text-sm md:text-base lg:text-lg"
+          >      
+            Browse
+          </label>
+        
+          <p 
+            className="px-2 py-1 min-w-[140px] max-w-[260px] truncate text-center text-xs sm:text-sm md:text-base lg:text-lg font-bold border-3 border-lime-400 hover:bg-lime-400"
+            title={file?.name ?? ""}
+          >
+            {file?.name ?? "No file selected"}
+        </p>
+        
+          <button
+            onClick={onUploadAvatar}
+            className="px-2 py-1 border-3 border-purple-400 hover:bg-purple-400 font-bold text-xs sm:text-sm md:text-base lg:text-lg"
+          >
+            Upload Avatar
+          </button>
+        </div>
 
-      <label style={{ display: "grid", gap: 4, maxWidth: 308, marginTop: 18 }}>
-        <span style={{ fontSize: "18px" }}>Name</span>
+      <label className="mt-9 mx-auto grid w-full max-w-[308px] gap-1">
+        <span className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-blue-400">Name</span>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{ padding: 10 }}
+          className="border border-sky-400 px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg"
         />
       </label>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+      <div className="mt-3 mx-auto flex w-full max-w-[308px] gap-2 justify-center">
         <button
           onClick={onSave}
-          style={{
-            flex: 0.18,
-            fontSize: "16px",
-            padding: "2px",
-          }}
+          className="w-1/2 border-3 px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg border-orange-400 hover:bg-orange-400 font-bold"
         >
           Update Name
         </button>
         <button
           onClick={() => navigate("/")}
-          style={{
-            flex: 0.22,
-            fontSize: "16px",
-            padding: "5px",
-          }}
+          className="w-1/2 border-3 px-2 pt-1 text-xs sm:text-sm md:text-base lg:text-lg border-fuchsia-400 hover:bg-fuchsia-400 font-bold"
         >
           Back to Home
         </button> {/* Use navigate() for routing */}
       </div>
 
-      <p style={{ marginTop: 12 }}>{status}</p>
+      <p className="mt-3 font-bold text-red-400 text-center">{status}</p>
       
-      <h2 style={{ marginTop: 28 }}>Change Password</h2>
-      <div style={{ display: "grid", gap: 10, maxWidth: 305 }}>
+      <label className="mt-9 mx-auto grid w-full max-w-[308px] gap-1 font-bold">Change Password
         <input
           type="password"
           placeholder="Old password"
           value={oldPassword}
           onChange={(e) => setOldPassword(e.target.value)}
-          style={{ padding: 10 }}
+          className="px-2 py-1 border border-indigo-400 text-xs sm:text-sm md:text-base lg:text-lg"
         />
         <input
           type="password"
           placeholder="New password (min 8 chars)"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          style={{ padding: 10}}
+          className="mt-3 px-2 py-1 border border-indigo-400 text-xs sm:text-sm md:text-base lg:text-lg"
         />
-        <button onClick={onChangePassword} style={{ padding: 10, fontSize: 16 }}>
+        <button onClick={onChangePassword} className="mt-2 px-2 py-1 w-fit mx-auto border-4 border-green-400 font-bold hover:bg-green-400 text-xs sm:text-sm md:text-base lg:text-lg">
           Update Password
         </button>
-        <div style={{ opacity: 0.9 }}>{pwStatus}</div>
-      </div>  
-      <h3 style={{ marginTop: 28 }}>Two-Factor Authentication (2FA)</h3>
+        <div
+          className="opacity-90">{pwStatus}
+        </div>
+      </label>  
       
-      <div style={{ display: "grid", gap: 10, maxWidth: 305 }}>
-        <div style={{ fontSize: "16px" }}>
+      <h3 className="mt-9 text-center font-bold text-xs sm:text-sm md:text-base lg:text-lg">Two-Factor Authentication (2FA)</h3>
+      
+      <div className="mx-auto grid w-fit gap-2 justify-items-center text-center">
+        <div className="text-xs sm:text-sm md:text-base lg:text-lg">
           Status:{" "}
           <b>{meUser?.twoFactorEnabled ? "Enabled ✅" : "Not enabled ❌"}</b>
         </div>
         
         {!meUser?.twoFactorEnabled ? (
           <>
-            <button onClick={onStartTwoFaSetup} style={{ padding: 10, fontSize: "16px" }}>
+            <button onClick={onStartTwoFaSetup} className="border px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg">
               Start 2FA Setup (Generate QR)
             </button>
             
             {twoFaQr && (
-              <div style={{ display: "grid", gap: 8 }}>
+              <div className="grid gap-2">
                 <img
                   src={twoFaQr}
                   alt="2FA QR code"
-                  style={{ width: 220, height: 220, border: "1px solid #333", borderRadius: 8 }}
+                  className="mx-auto block"
                 />
                 
                 <input
@@ -256,10 +268,10 @@ export default function ProfilePage() {
                   value={twoFaCode}
                   onChange={(e) => setTwoFaCode(e.target.value)}
                   inputMode="numeric"
-                  style={{ padding: 10 }}
+                  className="border text-center px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg"
                 />
                 
-                <button onClick={onEnableTwoFa} style={{ padding: 10, fontSize: "16px" }}>
+                <button onClick={onEnableTwoFa} className="border px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg">
                   Enable 2FA
                 </button>
               </div>
@@ -272,16 +284,17 @@ export default function ProfilePage() {
               value={twoFaDisableCode}
               onChange={(e) => setTwoFaDisableCode(e.target.value)}
               inputMode="numeric"
-              style={{ padding: 10 }}
+              className="border mt-4 text-center px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg"
             />
             
-            <button onClick={onDisableTwoFa} style={{ padding: 10, fontSize: "16px" }}>
+            <button onClick={onDisableTwoFa} className="border px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg">
               Disable 2FA
             </button>
           </>
         )}
-        <div style={{ opacity: 0.9 }}>{twoFaStatus}</div>
+        <div className="text-xs sm:text-sm md:text-base lg:text-lg opacity-90">{twoFaStatus}</div>
       </div>
     </div>
+  </div>
   );
 }

@@ -61,91 +61,88 @@ export default function App() {
   // Main App with routing wrapped in Router
   return (
     <Router>
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1 }}>
-          <Routes>
-            <Route
-              path="/login"
-              element={
-                isFirstTime ? (
-                  <Navigate to="/first-setup" replace />
-                ) : hasToken ? (
-                  <Navigate to="/" replace />
-                ) : (
-                  <LoginPage onLoggedIn={() => setHasToken(true)} />
-                )
-              }
-            />
+      <div className="flex flex-col">
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              isFirstTime ? (
+                <Navigate to="/first-setup" replace />
+              ) : hasToken ? (
+                <Navigate to="/" replace />
+              ) : (
+                <LoginPage onLoggedIn={() => setHasToken(true)} />
+              )
+            }
+          />
         
-            <Route
-              path="/oauth/callback"
-              element={<OAuthCallbackPage onLoggedIn={() => setHasToken(true)} />}
-            />
+          <Route
+            path="/oauth/callback"
+            element={<OAuthCallbackPage onLoggedIn={() => setHasToken(true)} />}
+          />
         
-            <Route
-              path="/"
-              element={
-                isFirstTime ? (
-                  <Navigate to="/first-setup" replace />
-                ) : hasToken ? (
-                // TODO: check role here
-                <HomePage onLogout={() => setHasToken(false)} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              }
-            />
+          <Route
+            path="/"
+            element={
+              isFirstTime ? (
+                <Navigate to="/first-setup" replace />
+              ) : hasToken ? (
+              // TODO: check role here
+              <HomePage onLogout={() => setHasToken(false)} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
         
-            <Route
-              path="/profile"
-              element={hasToken ? <ProfilePage /> : <Navigate to="/login" replace /> }
-            />
-            <Route
-              path="/matches"
-              element={hasToken ? <MatchesPage /> : <Navigate to="/login" replace /> }
-            />
-            <Route
-              path="/leaderboard"
-              element={hasToken ? <LeaderboardPage /> : <Navigate to="/login" replace /> }
-            />
-            <Route
-              path="/game"
-              element={hasToken ? <GamePage /> : <Navigate to="/login" replace /> } />
+          <Route
+            path="/profile"
+            element={hasToken ? <ProfilePage /> : <Navigate to="/login" replace /> }
+          />
+          <Route
+            path="/matches"
+            element={hasToken ? <MatchesPage /> : <Navigate to="/login" replace /> }
+          />
+          <Route
+            path="/leaderboard"
+            element={hasToken ? <LeaderboardPage /> : <Navigate to="/login" replace /> }
+          />
+          <Route
+            path="/game"
+            element={hasToken ? <GamePage /> : <Navigate to="/login" replace /> } />
         
-            {/* First Time Setup Route */}
-            <Route
-              path="/first-setup"
-              element={<FirstSetupPage onSetupComplete={() => setIsFirstTime(false)} /> }
-            />
-            <Route
-              path="/create-user"
-              element={hasToken ? <UserCreationPage /> : <Navigate to="/login" replace /> } />
-            <Route
-              path="/admin"
-              element={
-                hasToken ? (
-                  <AdminDashboardPage onLogout={() => setHasToken(false)} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              }
-            />
-            <Route
-              path="/admin/users"
-              element={hasToken ? <UserListPage /> : <Navigate to="/login" replace /> }
-            />
-          
-            <Route path="/privacy" element={<PrivacyPolicyPage />} />
-            <Route path="/terms" element={<TermsOfServicePage />} />
+          {/* First Time Setup Route */}
+          <Route
+            path="/first-setup"
+            element={<FirstSetupPage onSetupComplete={() => setIsFirstTime(false)} /> }
+          />
+          <Route
+            path="/create-user"
+            element={hasToken ? <UserCreationPage /> : <Navigate to="/login" replace /> } />
+          <Route
+            path="/admin"
+            element={
+              hasToken ? (
+                <AdminDashboardPage onLogout={() => setHasToken(false)} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={hasToken ? <UserListPage /> : <Navigate to="/login" replace /> }
+          />
+         
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
             
-            <Route path="/public-test" element={<PublicApiTestPage />} />
+          <Route path="/public-test" element={<PublicApiTestPage />} />
             
-          </Routes>
-        </div>
-        
+        </Routes>
+
         <Footer />
       </div>
     </Router>
   );
 }
-

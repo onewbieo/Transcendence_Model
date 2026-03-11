@@ -147,44 +147,46 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   }
         
   return (
-    <div style={{ maxWidth: 420, margin: "48px auto", padding: 24 }}>
-      <h1 style={{ marginBottom: 12 }}>Login</h1>
+  <div className="px-4 py-8 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="w-full mx-auto px-5 py-2 pt-5 pb-5 border-4 border-indigo-400 sm:max-w-sm md:max-w-md lg:max-w-lg">
+      <h1 className="block w-fit px-2 py-1 mx-auto mb-1 text-xs sm:text-sm md:text-base lg:text-lg text-center font-extrabold border-4 hover:bg-lime-400">Welcome</h1>
       
       {!tempToken ? (
-        <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-          <label style={{ display: "grid", gap: 6 }}>
-            <span>Email</span>
+        <form onSubmit={onSubmit} className="grid gap-3">
+          <label className="grid gap-1.5">
+            <span className="text-xs sm:text-sm md:text-base lg:text-lg text-red-500 font-bold">Email</span>
             <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setEmail((v) => v.trim().toLowerCase())}
               autoComplete="email"
-              style={{ padding: 10 }}
+              className="border-4 border-sky-100 px-3 py-2 focus:ring-0 outline-none"
             />
           </label>
 
-          <label style={{ display: "grid", gap: 6 }}>
-            <span>Password</span>
+          <label className="grid gap-1.5">
+            <span className="text-xs sm:text-sm md:text-base lg:text-lg text-red-500 font-bold">Password</span>
             <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              type="password"
               autoComplete="current-password"
-              style={{ padding: 10 }}
+              className="border-4 border-sky-100 px-3 py-2 focus:ring-0 outline-none"
             />
           </label>
 
           <button
             type="submit"
             disabled={loading}
-            style={{ padding: 10, fontSize: "20px" }}
+            className="mt-2 border-4 mx-auto px-2 border-blue-700 text-blue-700 hover:bg-red-500 text-xs sm:text-sm md:text-base lg:text-lg"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
           
           <button
             type="button"
-            style={{ padding: 10, width: "100%", fontSize: "20px" }}
+            className="mt-2 border-4 border-pink-400 mx-auto px-2 text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-300 text-pink-400"
             onClick={() => {
               window.location.href = "/api/auth/oauth/google";
             }}
@@ -193,8 +195,8 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
           </button>
         </form>
       ) : (
-        <form onSubmit={onSubmitOtp} style={{ display: "grid", gap: 12 }}>
-          <label style={{ display: "grid", gap: 6 }}>
+        <form onSubmit={onSubmitOtp} className="grid gap-3">
+          <label className="mt-2 grid text-center gap-2">
             <span>2FA code</span>
             <input
               value={otp}
@@ -202,17 +204,17 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder="123456"
-              style={{ padding: 10 }}
+              className="w-fit mx-auto border rounded-md text-center px-4 py-2"
             />
           </label>
           
-          <button type="submit" style={{ padding: 10, fontSize: "20px" }}>
+          <button type="submit" className="mt-2 px-4 py-2 w-fit mx-auto border text-xs sm:text-sm md:text-base lg:text-lg hover:bg-lime-400">
             Verify
           </button>
           
           <button
             type="button"
-            style={{ padding: 10, fontSize: "20px" }}
+            className="px-4 py-2 w-fit mx-auto border text-xs sm:text-sm md:text-base lg:text-lg hover:bg-lime-400"
             onClick={resetToLogin}
           >
             Back
@@ -220,21 +222,17 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         </form>
       )}
 
-      <p style={{ marginTop: 12 }}>{status}</p>
+      <p className="mt-3 text-center font-bold">{status}</p>
 
       {meJson && (
         <pre
-          style={{
-            marginTop: 12,
-            padding: 12,
-            background: "#111",
-            color: "#eee",
-            overflowX: "auto"
-          }}
+          className="mt-3 px-4 py-2 bg-black text-white overflow-x-auto"
         >
           {JSON.stringify(meJson, null, 2)}
         </pre>
       )}
+      
     </div>
+</div>
   );
 }

@@ -2,10 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 import { me, notifications, type NotificationRow } from "../api";
 import { clearToken } from "../lib/auth";
-import ProfilePage from "./ProfilePage";
-import MatchesPage from "./MatchesPages";
-import LeaderboardPage from "./LeaderboardPage";
-import GamePage from "./GamePage";
 
 type MeUser = {
   id: number;
@@ -20,6 +16,16 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const [meUser, setMeUser] = useState<MeUser | null>(null);
   const [status, setStatus] = useState("loading...");
   const [notifs, setNotifs] = useState<NotificationRow[]>([]);
+  const meUserPreview =
+    meUser == null
+      ? null
+      : {
+          ...meUser,
+          name:
+            meUser.name && meUser.name.length > 24
+              ? `${meUser.name.slice(0, 24)}...`
+              : meUser.name,
+        };
   
   const navigate = useNavigate(); // Hook to navigate to different routes
   
@@ -72,99 +78,100 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   const goToGame = () => navigate("/game");
   
   return (
-    <div style={{ maxWidth: 720, margin: "48px auto", padding: 24 }}>
-      <h1>ft_transcendence</h1>
-      <p style={{ fontSize: "20px" }}>
-        Status: {status}
-      </p>
+  <div className="px-4 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="w-full mx-auto border-4 border-orange-400 px-4 py-2 sm:max-w-sm md:max-w-md lg:max-w-lg">
+      <h1 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold">Ft_Transcendence</h1>
+        <p className="flex gap-2">
+          <span className="text-xs sm:text-sm md:text-base lg:text-lg text-blue-400 font-bold"> 
+            Status:
+          </span>
+          <span className="text-xs sm:text-sm md:text-base lg:text-lg font-extrabold text-yellow-400">
+            {status}
+          </span>
+        </p>
 
-      <p style={{ fontSize: "20px" }}>
-        Logged in as: <b>{meUser?.name ?? "(no name yet)"}</b>
+      <p className="text-xs sm:text-sm md:text-base lg:text-lg flex items-baseline gap-2 min-w-0">
+        <span className="whitespace-nowrap text-purple-400 font-extrabold shrink-0">
+          Logged in as:
+        </span>
+        <span 
+          className="font-medium min-w-0 truncate"
+        >
+          {meUser?.name ?? "(no name yet)"}
+        </span>
       </p>
       
-      <div style={{ marginTop: 12 }}>
+      <div className="mt-2">
         <img
           src={meUser?.avatarUrl ?? "/default-avatar.png"}
           alt="avatar"
           width={96}
           height={96}
-          style={{
-            borderRadius: 12,
-            objectFit: "cover",
-            border: "1px solid #333",
-          }}
+          className="rounded-xl border-4"
         />
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+      <div className="flex flex-wrap gap-2">
         {/* Use navigate for routing */}
         <button
           onClick={goToProfile}
-          style={{
-            flex: 0.18,
-            fontSize: "20px",
-          }}
+          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
         >
           Profile
         </button>
         <button
           onClick={goToMatches}
-          style={{
-            flex: 0.22,
-            fontSize: "20px",
-          }}  
+          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
         >
           Matches
         </button>
         <button
           onClick={goToLeaderboard}
-          style={{
-            flex: 0.22,
-            fontSize: "18px",
-          }}
+          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
         >
           Leaderboard
         </button>
         <button
           onClick={goToGame}
-          style={{
-            flex: 0.19,
-            fontSize: "22px",
-          }}
+          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
         >
           Game
         </button>
         <button
           onClick={handleLogout}
-          style={{
-            flex: 0.19,
-            fontSize: "22px",
-          }}
+          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
         >
           Logout
         </button>
       </div>
       
-      <h2 style={{ marginTop: 24 }}>Notifications</h2>
+      <section className="mt-5">
+        <h2 className="w-fit px-2 py-1 font-bold text-xs sm:text-sm md:text-base lg:text-lg border-2 rounded-xl hover:bg-red-500">
+          Notifications
+        </h2>
         {notifs.length === 0 ? (
-          <p>No notifications yet.</p>
+          <p className="mt-2 text-xs sm:text-sm md:text-base lg:text-lg font-bold">No notifications yet.</p>
         ) : (
-          <ul style={{ paddingLeft: 18 }}>
+          <ul className="mt-2 max-h-64 overflow-y-auto space-y-2 pr-5">
             {notifs.map((n) => (
-              <li key={n.id} style={{ marginBottom: 6 }}>
-                <span style={{ opacity: 0.7 }}>
-                  {new Date(n.createdAt).toLocaleString()} —{" "}
-                </span>
-                {n.message}
+              <li key={n.id} className="rounded-md border-2 px-3 py-2 hover:bg-red-400">
+                <p className="text-xs sm:text-sm md:text-base lg:text-lg opacity-70">
+                  {new Date(n.createdAt).toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs sm:text-sm md:text-base lg:text-lg break-words">
+                  {n.message}
+                </p>
               </li>
             ))}
           </ul>
         )}
-      <h3 style={{ marginTop: 24 }}>Me</h3>
-      <pre style={{ padding: 12, background: "#111", color: "#eee", overflowX: "auto" }}>
-        {JSON.stringify(meUser, null, 2)}
+      </section>
+      <h3 className="mt-2 px-2 py-1 w-fit border-4 border-pink-400 font-bold hover:bg-pink-400">Me</h3>
+      <pre className="p-3 bg-black text-white overflow-x-auto whitespace-pre-wrap break-words">
+        {JSON.stringify(meUserPreview, null, 2)}
       </pre>
     </div>
+  </div>
   );
 }
   

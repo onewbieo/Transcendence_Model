@@ -29,5 +29,5 @@ export default function OAuthCallbackPage({ onLoggedIn }: { onLoggedIn: () => vo
     nav("/login", { replace: true });
   }, [nav, onLoggedIn]);
 
-  return <div style={{ padding: 24 }}>Completing login...</div>;
+  return <div className="p-6 text-center text-xs sm:text-sm md:text-base lg:text-lg">Completing login...</div>;
 }

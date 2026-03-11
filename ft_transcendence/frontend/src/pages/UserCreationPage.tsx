@@ -61,95 +61,71 @@ export default function UserCreationPage() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: "48px auto", padding: 24 }}>
-      <h1>Create New User</h1>
+  <div className="px-4 py-2 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="mt-2 px-2 py-1 pt-5 pb-5 border-4 border-slate-200 mx-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg">
+      <h1 className="text-center font-bold text-xs sm:text-sm md:text-base lg:text-lg">Create New User</h1>
       <form
         onSubmit={handleCreateUser}
         noValidate
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 20,
-        }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <label style={{ fontSize: "18px" }}>
-            Email
-          </label>
-          <input 
-            style={{
-              padding: "4px",
-              width: "220px",
-            }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onBlur={() => setEmail((v) => v.trim().toLowerCase())}
-            type="email"
-          />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>  
-          <label style={{ fontSize: "18px" }}>
-            Password
-          </label>
+          <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+            <span className="w-20 text-right">Email</span>
             <input
-              style={{
-                padding: "4px",
-                width: "185px",
-              }}
+              className="w-56 border px-2 py-1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setEmail((v) => v.trim().toLowerCase())}
+              type="email"
+            />
+          </label>
+          
+          <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+            <span className="w-20 text-right">Password</span>
+            <input
+              className="w-56 border px-2 py-1"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
             />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <label style={{ fontSize: "18px" }}>
-            Name
           </label>
+          <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+            <span className="w-20 text-right">Name</span>
             <input
-              style={{
-                padding: "4px",
-                width: "218px",
-              }}
+              className="w-56 border px-2 py-1"
               value={name}
               onChange={(e) => setName(e.target.value)}
               type="text"
-            />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}> 
-        <label>Role</label>
+            /> 
+          </label>
+        <label className="mt-2 flex items-center justify-center gap-4 text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="w-20 text-right">Role</span>
           <select
+            className="w-56"
             value={role}
             onChange={(e) => setRole(e.target.value)}
           >
             <option value="USER">User</option>
             <option value="ADMIN">Admin</option>
           </select>
-        </div>
+        </label>
         <button
+          className="mt-2 flex gap-2 px-2 py-1 border w-fit mx-auto text-xs sm:text-sm md:text-base lg:text-lg hover:bg-red-400"
           type="submit"
           disabled={loading}
-          style={{
-            fontSize: "20px",
-            width: "71%",
-          }}
         >
           {loading ? "Creating..." : "Create User"}
         </button>
         <button
+          className="mt-2 flex gap-2 px-2 py-1 border w-fit mx-auto text-xs sm:text-sm md:text-base lg:text-lg hover:bg-red-400"
           type="button"
           onClick={() => navigate("/admin")}
-          style={{
-            fontSize: "20px",
-            width: "71%",
-            marginTop: 8,
-            padding: 3,
-          }}
         >
           Back to Admin Dashboard
         </button>
       </form>
       <p>{status}</p>
     </div>
+  </div>
   );
 }
 

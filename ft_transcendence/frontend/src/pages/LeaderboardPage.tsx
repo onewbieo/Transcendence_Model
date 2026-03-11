@@ -18,51 +18,60 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 900, margin: "48px auto", padding: 24 }}>
-      <h1>Leaderboard</h1>
+  <div className="px-4 py-2 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="px-2 py-1">
+      <h1 className="mt-2 px-2 py-1 block w-fit mx-auto border-2 text-center font-extrabold hover:bg-red-400 text-xs sm:text-sm md:text-base lg:text-lg">Leaderboard</h1>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+      <div className="mt-4 px-2 py-1 w-fit border-3 font-bold hover:bg-purple-400 text-xs sm:text-sm md:text-base lg:text-lg">
         <button
           onClick={() => navigate("/")}
-          style={{
-            padding: 10,
-            fontSize: "15px",
-          }}
         >
           Back to Home
         </button> {/* Use navigate() for routing */}
       </div>
 
-      <p style={{ marginTop: 12, fontSize: "22px" }}>
-        Status: {status}
+      <p className="flex gap-2 mt-2">
+        <span className="font-bold text-sky-400 text-xs sm:text-sm md:text-base lg:text-lg">Status:</span>
+        <span className="font-bold text-red-400 text-xs sm:text-sm md:text-base lg:text-lg">{status}</span>
       </p>
 
       {rows.length === 0 ? (
-        <p style={{ fontSize: "22px" }}>
+        <p className="font-bold text-xs sm:text-sm md:text-base lg:text-lg">
           No leaderboard yet.
         </p>
       ) : (
-        <table style={{ width: "100%", marginTop: 12, borderCollapse: "collapse" }}>
+        <div className="mt-2 pb-5 overflow-x-auto">
+        <table className="w-full min-w-[560px] mt-2 border-3 text-left">
           <thead>
             <tr>
-              <th align="left">#</th>
-              <th align="left">Name</th>
-              <th align="left">Email</th>
-              <th align="left">Wins</th>
+              <th className="px-1 text-xs sm:text-sm md:text-base lg:text-lg">#</th>
+              <th className="px-2 text-xs sm:text-sm md:text-base lg:text-lg">Name</th>
+              <th className="px-1 text-xs sm:text-sm md:text-base lg:text-lg">Email</th>
+              <th className="px-1 pr-2 text-xs sm:text-sm md:text-base lg:text-lg">Wins</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, idx) => (
-              <tr key={r.user.id} style={{ borderTop: "1px solid #333" }}>
-                <td>{idx + 1}</td>
-                <td>{r.user.name ?? "(no name)"}</td>
-                <td>{r.user.email}</td>
-                <td>{r.wins}</td>
+              <tr key={r.user.id} className="border-1 border-slate-300">
+                <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg">{idx + 1}</td>
+                <td className="px-2 text-xs sm:text-sm md:text-base lg:text-lg">
+                  <span className="block max-w-[300px] truncate whitespace-nowrap ">
+                    {r.user.name ?? "(no name)"}
+                  </span>
+                </td>
+                <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg">
+                  <span className="block max-w-[300px] truncate whitespace-nowrap ">
+                    {r.user.email}
+                  </span>
+                </td>
+                <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg">{r.wins}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
+  </div>
   );
 }
