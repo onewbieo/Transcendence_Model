@@ -34,7 +34,7 @@ export default function App() {
   useEffect(() => {
     const checkForUsers = async () => {
       try {
-        const data = await api("/admin/first-setup", { method: "GET" })
+        const data = await api<{ firstSetupRequired: boolean }>("/admin/first-setup", { method: "GET" });
         if (data?.firstSetupRequired) {
           setIsFirstTime(true);
         }

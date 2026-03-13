@@ -1,12 +1,8 @@
-import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearToken } from "../lib/auth";
 
 export default function AdminDashboardPage({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
-  
-  const adminBtnClass =
-    "mt-5 block mx-auto px-2 py-1 border-4 font-bold text-center hover:bg-blue-300 rounded-xl";
   
   function handleLogout() {
     clearToken();

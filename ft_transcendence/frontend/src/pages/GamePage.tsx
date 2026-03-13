@@ -104,9 +104,9 @@ export default function GamePage() {
     ws.onmessage = (ev) => {
       if (connIdRef.current !== myId)
         return;
-      let msg: ServerMsg | null = null;
+      let msg: ServerMsg;
       try {
-        msg = JSON.parse(ev.data);
+        msg = JSON.parse(ev.data) as ServerMsg;
       }
       catch {
         return;
@@ -350,7 +350,7 @@ export default function GamePage() {
       </div>
 
       <div className="mt-2 flex flex-col gap-6 items-center">
-        <div className="w-[clamp(290px,min(92vw,calc((100dvh-14rem)*4/3)),660px)] aspect-[4/3]">
+        <div className="w-[clamp(290px,min(92vw,calc((100dvh-14rem)*4/3)),800px)] aspect-[4/3]">
           <canvas
             ref={canvasRef}
             width={WIDTH}

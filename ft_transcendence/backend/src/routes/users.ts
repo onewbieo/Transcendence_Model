@@ -158,7 +158,7 @@ export async function userRoutes(app: FastifyInstance) {
     
     const user = await prisma.user.update({
       where: { id: payload.sub },
-      data: { name: name ?? undefined },
+      data: name !== undefined ? { name } : {},
       select: { id: true, email: true, name: true, role: true, createdAt: true , avatarUrl: true },
     });
     
@@ -357,10 +357,7 @@ export async function userRoutes(app: FastifyInstance) {
     try {
       const user = await prisma.user.update({
         where: { id },
-        data: {
-          // if name is undefined, Prisma ignores it (no change)
-          name: name ?? undefined,
-        },
+        data: name !== undefined ? { name } : {},
         select: { id: true, email: true, name: true, role: true, createdAt: true, avatarUrl: true },
       });
       

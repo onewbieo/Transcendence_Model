@@ -48,7 +48,7 @@ type ServerMsg =
       type: "game:state";
       tick: number;
       paused: boolean;
-      pauseMessage?: string;
+      pauseMessage?: string | undefined;
       ball: { x: number; y: number; vx: number; vy: number; r: number };
       p1: { y: number };
       p2: { y: number };
@@ -82,34 +82,34 @@ type Room = {
   scoreP2: number;
   
   paused: boolean;
-  userPaused?: boolean;
+  userPaused?: boolean | undefined;
   
-  isEnding?: boolean;
+  isEnding?: boolean | undefined;
   
   pauseMessage: string;
-  serveTimeout?: NodeJS.Timeout;
-  serveStartAtMs?: number;
-  serveDelayMs?: number;
-  serveDir?: 1 | -1;
-  serveInProgress?: boolean;
-  pendingServeRemainingMs?: number;
+  serveTimeout?: NodeJS.Timeout | undefined;
+  serveStartAtMs?: number | undefined;
+  serveDelayMs?: number | undefined;
+  serveDir?: 1 | -1 | undefined;
+  serveInProgress?: boolean | undefined;
+  pendingServeRemainingMs?: number | undefined;
   
   // grace timers
-  p1DisconnectTimer?: NodeJS.Timeout;
-  p2DisconnectTimer?: NodeJS.Timeout;
+  p1DisconnectTimer?: NodeJS.Timeout | undefined;
+  p2DisconnectTimer?: NodeJS.Timeout | undefined;
   
-  p1DisconnectDeadlineMs?: number;
-  p2DisconnectDeadlineMs?: number;
+  p1DisconnectDeadlineMs?: number | undefined;
+  p2DisconnectDeadlineMs?: number | undefined;
   
   // UI countdown (single ticker is fine)
-  disconnectCountdownInterval?: NodeJS.Timeout;
+  disconnectCountdownInterval?: NodeJS.Timeout | undefined;
   
   matchDbId: number; // Prisma Match.id 
   startedAtMs: number; // for durationMs
   
-  readyTimeout?: NodeJS.Timeout;
+  readyTimeout?: NodeJS.Timeout | undefined;
   
-  interval?: NodeJS.Timeout;
+  interval?: NodeJS.Timeout | undefined;
 };
 
 const rooms = new Map<string, Room>();
@@ -359,7 +359,7 @@ export function broadcastState(room :Room) {
     type: "game:state",
     tick: room.tick,
     paused: room.paused,
-    pauseMessage: room.pauseMessage || undefined,
+    ...(room.pauseMessage ? { pauseMessage: room.pauseMessage } : {}),
     ball: { x: room.ball.x, y: room.ball.y, vx: room.ball.vx, vy: room.ball.vy, r: BALL_RADIUS },
     p1: { y: room.p1Y },
     p2: { y: room.p2Y },
@@ -1056,4 +1056,3 @@ export async function gameWs(app: FastifyInstance) {
       });
   });
 }
-

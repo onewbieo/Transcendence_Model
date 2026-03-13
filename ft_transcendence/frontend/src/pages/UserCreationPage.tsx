@@ -43,7 +43,7 @@ export default function UserCreationPage() {
     setStatus("Creating user...");
 
     try {
-      const data = await api("/admin/users", {
+      await api("/admin/users", {
         method: "POST",
         body: JSON.stringify({ email: normEmail, password: pw, name: name.trim() || null, role }),
       });
@@ -128,4 +128,3 @@ export default function UserCreationPage() {
   </div>
   );
 }
-

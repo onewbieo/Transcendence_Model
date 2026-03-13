@@ -19,8 +19,8 @@ export type NotificationRow = {
   createdAt: string;
 };
 
-export async function notifications() {
-  return api("/notifications");
+export async function notifications(): Promise<{ items: NotificationRow[] }> {
+  return api<{ items: NotificationRow[] }>("/notifications");
 }
 
 export type LoginOkResponse = {

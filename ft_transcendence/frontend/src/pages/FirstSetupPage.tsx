@@ -48,7 +48,7 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
     setStatus("Creating admin...");
 
     try {
-      const data = await api("/admin/first-setup", {
+      const data = await api<{ message?: string }>("/admin/first-setup", {
         method: "POST",
         body: JSON.stringify({ email: normEmail, password: pw, name: normName }),
       });
@@ -116,4 +116,3 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
   </div>
   );
 }
-

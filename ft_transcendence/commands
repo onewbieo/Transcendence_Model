@@ -1,0 +1,187 @@
+DEV MODE
+
+cd /home/vboxuser/ft_transcendence
+docker compose down -v
+docker compose up -d postgres
+
+cd /home/vboxuser/ft_transcendence/backend
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run dev
+
+cd /home/vboxuser/ft_transcendence/frontend
+npm install
+npm run dev
+
+cd /home/vboxuser/ft_transcendence/backend
+npx prisma studio
+
+curl -sS http://localhost:3000/admin/first-setup
+
+curl -sS -X POST http://localhost:3000/admin/first-setup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123","name":"Admin"}'
+
+curl -sS -X POST http://localhost:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123"}'
+
+export ADMIN_TOKEN='<paste-admin-jwt>'
+export API_KEY='<paste-public-api-key>'
+
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/auth/me
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/users/me
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/notifications
+
+curl -sS -X POST http://localhost:3000/admin/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user1@example.com","password":"password123","name":"User One","role":"USER"}'
+
+curl -sS -X POST http://localhost:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user1@example.com","password":"password123"}'
+  
+export USER_TOKEN='<paste-user1-jwt>'
+
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/admin/users
+
+curl -sS -X POST http://localhost:3000/public/items \
+  -H "x-api-key: $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"item1","content":"hello"}'
+
+curl -sS -H "x-api-key: $API_KEY" http://localhost:3000/public/items
+
+curl -sS -X POST http://localhost:3000/matches \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"player1Id":1,"player2Id":2,"player1Score":5,"player2Score":3,"status":"FINISHED","winnerId":1,"durationMs":120000}'
+
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/matches
+curl -sS -H "Authorization: Bearer $USER_TOKEN" http://localhost:3000/matches
+curl -sS http://localhost:3000/leaderboard
+
+curl -sS -X POST http://localhost:3000/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user2@example.com","password":"password123","name":"User Two"}'
+
+curl -sS -X POST http://localhost:3000/auth/2fa/setup \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+  
+curl -sS -X POST http://localhost:3000/auth/2fa/enable \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"<6-digit-code>"}'
+
+curl -sS -X POST http://localhost:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123"}'
+
+curl -sS -X POST http://localhost:3000/auth/2fa/verify \
+  -H 'Content-Type: application/json' \
+  -d '{"tempToken":"<temp-token>","code":"<6-digit-code>"}'
+
+export ADMIN_2FA_TOKEN='<paste-verified-jwt>'
+
+curl -sS -X POST http://localhost:3000/auth/2fa/disable \
+  -H "Authorization: Bearer $ADMIN_2FA_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"<6-digit-code>"}'
+
+OAUTH
+http://localhost:3000/auth/oauth/google
+
+DOCKER MODE
+
+cd /home/vboxuser/ft_transcendence
+docker compose down -v
+docker compose up --build
+
+curl -k -sS https://localhost:8443/api/admin/first-setup
+
+curl -k -sS -X POST https://localhost:8443/api/admin/first-setup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123","name":"Admin"}'
+
+curl -k -sS -X POST https://localhost:8443/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123"}'
+  
+export ADMIN_TOKEN='<paste-admin-jwt>'
+export API_KEY='<paste-public-api-key>'
+
+curl -k -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://localhost:8443/api/auth/me
+curl -k -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://localhost:8443/api/users/me
+curl -k -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://localhost:8443/api/notifications
+
+curl -k -sS -X POST https://localhost:8443/api/admin/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user1@example.com","password":"password123","name":"User One","role":"USER"}'
+
+curl -k -sS -X POST https://localhost:8443/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user1@example.com","password":"password123"}'
+
+export USER_TOKEN='<paste-user1-jwt>'
+
+curl -k -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://localhost:8443/api/admin/users
+
+curl -k -sS -X POST https://localhost:8443/api/public/items \
+  -H "x-api-key: $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"item1","content":"hello"}'
+  
+curl -k -sS -H "x-api-key: $API_KEY" https://localhost:8443/api/public/items
+
+curl -k -sS -X POST https://localhost:8443/api/matches \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"player1Id":1,"player2Id":2,"player1Score":5,"player2Score":3,"status":"FINISHED","winnerId":1,"durationMs":120000}'
+
+curl -k -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://localhost:8443/api/matches // matches belonging to admin account //
+curl -k -sS -H "Authorization: Bearer $USER_TOKEN" https://localhost:8443/api/matches // matches belonging to the user account //
+curl -k -sS https://localhost:8443/api/leaderboard
+
+curl -k -sS -X POST https://localhost:8443/api/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user2@example.com","password":"password123","name":"User Two"}'
+
+curl -k -sS -X POST https://localhost:8443/api/auth/2fa/setup \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+curl -k -sS -X POST https://localhost:8443/api/auth/2fa/enable \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"<6-digit-code>"}'
+
+curl -k -sS -X POST https://localhost:8443/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123"}'
+
+curl -k -sS -X POST https://localhost:8443/api/auth/2fa/verify \
+  -H 'Content-Type: application/json' \
+  -d '{"tempToken":"<temp-token>","code":"<6-digit-code>"}'
+
+export ADMIN_2FA_TOKEN='<paste-verified-jwt>'
+
+curl -k -sS -X POST https://localhost:8443/api/auth/2fa/disable \
+  -H "Authorization: Bearer $ADMIN_2FA_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"<6-digit-code>"}'
+
+OAUTH
+https://localhost:8443/api/auth/oauth/google
+
+
+
+
+
+
+
+
+
+
+

@@ -2,8 +2,16 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useNavigate } from "react-router-dom";
 
+type AdminUserRow = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string;
+  createdAt: string;
+};
+
 export default function UserListPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [status, setStatus] = useState("");
   const isError = status.startsWith("Error:");
   
@@ -12,7 +20,7 @@ export default function UserListPage() {
   async function fetchUsers() {
     setStatus("Loading users...");
     try {
-      const data = await api("/admin/users");
+      const data = await api<AdminUserRow[]>("/admin/users");
       setUsers(data);
       setStatus("");
     } catch (err: any) {

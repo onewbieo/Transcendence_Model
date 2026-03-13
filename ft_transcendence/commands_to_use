@@ -15,6 +15,9 @@ If code changes when you have dockers run
 docker compose down
 docker compose up --build
 
+before you start developing mode
+npx prisma generate 
+
 If prisma changes logic then yes you need to built.
 
 DO NOT NPM RUN DEV while Docker is up. 

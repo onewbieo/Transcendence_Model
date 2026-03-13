@@ -28,6 +28,7 @@ export async function matchRoutes(app: FastifyInstance) {
       const player1Score = body.player1Score;
       const player2Score = body.player2Score;
       const status = body.status ?? "FINISHED";
+      const durationMs = typeof body.durationMs === "number" ? body.durationMs : null;
       
       // Basic validation
       if (
@@ -42,7 +43,6 @@ export async function matchRoutes(app: FastifyInstance) {
       }
       
       // Handle non-tournament match creation (regular match creation here)
-      const winnerId = status === "DRAW" ? null : body.winnerId;
       const match = await prisma.match.create({
         data: {
           status,
@@ -50,8 +50,8 @@ export async function matchRoutes(app: FastifyInstance) {
           player2Id,
           player1Score,
           player2Score,
-          winnerId,
-          durationMs: Number.isFinite(body.durationMs) ? body.durationMs : null,
+          winnerId: status === "DRAW" ? null : body.winnerId ?? null,
+          durationMs,
         },
         select: {
           id: true,
@@ -193,4 +193,3 @@ export async function matchRoutes(app: FastifyInstance) {
     }));
   });
 }
-

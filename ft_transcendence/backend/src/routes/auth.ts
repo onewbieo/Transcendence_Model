@@ -17,7 +17,7 @@ export async function authRoutes(app: FastifyInstance) {
   
   // POST /auth/signup // creates a user, issues a token after that //
   app.post("/auth/signup", async (req, reply) => {
-    const body = req.body as { email?: string; password?: string; name?: string };
+    const body = req.body as { email?: string; password?: string; name?: string; role?: string };
     
     const email = normalizeEmail(body.email);
     const password = body.password ?? "";
