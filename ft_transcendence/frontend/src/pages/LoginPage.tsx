@@ -148,45 +148,45 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         
   return (
   <div className="px-4 py-8 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
-    <div className="w-full mx-auto px-5 py-2 pt-5 pb-5 border-4 border-indigo-400 sm:max-w-sm md:max-w-md lg:max-w-lg">
-      <h1 className="block w-fit px-2 py-1 mx-auto mb-1 text-xs sm:text-sm md:text-base lg:text-lg text-center font-extrabold border-4 hover:bg-lime-400">Welcome</h1>
+    <div className="mx-auto px-2 py-1 pt-5 pb-5 border-4 border-yellow-400 sm:max-w-sm md:max-w-md lg:max-w-lg">
+      <h1 className="block w-fit px-2 py-1 mx-auto mb-1 text-xs sm:text-sm md:text-base lg:text-lg text-center font-extrabold border-4 hover:bg-zinc-400 rounded-md">Welcome</h1>
       
       {!tempToken ? (
-        <form onSubmit={onSubmit} className="grid gap-3">
+        <form onSubmit={onSubmit} className="grid gap-3 block">
           <label className="grid gap-1.5">
-            <span className="text-xs sm:text-sm md:text-base lg:text-lg text-red-500 font-bold">Email</span>
+            <span className="text-xs sm:text-sm md:text-base lg:text-lg text-cyan-500 font-bold">Email</span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setEmail((v) => v.trim().toLowerCase())}
               autoComplete="email"
-              className="border-4 border-sky-100 px-3 py-2 focus:ring-0 outline-none"
+              className="border-4 border-slate-500 px-3 py-2 focus:ring-0 outline-none"
             />
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs sm:text-sm md:text-base lg:text-lg text-red-500 font-bold">Password</span>
+            <span className="text-xs sm:text-sm md:text-base lg:text-lg text-cyan-500 font-bold">Password</span>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="border-4 border-sky-100 px-3 py-2 focus:ring-0 outline-none"
+              className="border-4 border-slate-500 px-3 py-2 focus:ring-0 outline-none"
             />
           </label>
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 border-4 mx-auto px-2 border-blue-700 text-blue-700 hover:bg-red-500 text-xs sm:text-sm md:text-base lg:text-lg"
+            className="mt-2 border-4 mx-auto px-2 border-blue-700 text-blue-700 font-extrabold hover:bg-blue-300 text-xs sm:text-sm md:text-base lg:text-lg rounded-xl"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
           
           <button
             type="button"
-            className="mt-2 border-4 border-pink-400 mx-auto px-2 text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-300 text-pink-400"
+            className="mt-2 border-4 border-emerald-700 mx-auto px-2 text-xs sm:text-sm md:text-base lg:text-lg hover:bg-emerald-400 text-emerald-700 font-extrabold rounded-xl"
             onClick={() => {
               window.location.href = "/api/auth/oauth/google";
             }}
@@ -222,7 +222,7 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         </form>
       )}
 
-      <p className="mt-3 text-center font-bold">{status}</p>
+      <p className="mt-3 text-center text-red-500 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg">{status}</p>
 
       {meJson && (
         <pre

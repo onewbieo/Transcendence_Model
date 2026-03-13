@@ -1,8 +1,13 @@
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
+
 export default function TermsOfServicePage() {
+  
+  const navigate = useNavigate(); // Hook to navigate to different routes
+  
   return (
   <div className="px-4 py-2 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
-    <div className="px-2 py-1 border">
-      <h1 className="w-fit mx-auto border-2 px-2 py-1 font-extrabold border-yellow-400 hover:bg-yellow-400">Terms of Service</h1>
+    <div className="px-2 py-1 pt-4 pb-5 border-2 border-yellow-400">
+      <h1 className="mt-3 w-fit mx-auto border-4 rounded-md px-2 py-1 font-extrabold hover:bg-zinc-400">Terms of Service</h1>
       <p className="mt-2"><b>Last updated:</b> 2026-01-21</p>
 
       <p>
@@ -63,6 +68,12 @@ export default function TermsOfServicePage() {
         For questions, contact the project administrator (as provided in the application or repository).
       </p>
     </div>
+    <button
+      onClick={() => navigate("/")}
+      className="mt-5 w-1/2 border-4 border-fuchsia-500 text-fuchsia-500 rounded-xl px-2 py-1 block w-fit mx-auto text-xs sm:text-sm md:text-base lg:text-lg border-fuchsia-400 hover:bg-fuchsia-300 font-bold"
+    >
+      Back to Home
+    </button> {/* Use navigate() for routing */}
   </div>
   );
 }

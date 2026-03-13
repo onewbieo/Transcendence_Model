@@ -79,19 +79,19 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
   
   return (
   <div className="px-4 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
-    <div className="w-full mx-auto border-4 border-orange-400 px-4 py-2 sm:max-w-sm md:max-w-md lg:max-w-lg">
-      <h1 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold">Ft_Transcendence</h1>
+    <div className="w-full border-4 border-yellow-400 px-2 py-1">
+      <h1 className="mt-2 text-xs sm:text-sm md:text-base lg:text-lg font-bold">Ft_Transcendence</h1>
         <p className="flex gap-2">
-          <span className="text-xs sm:text-sm md:text-base lg:text-lg text-blue-400 font-bold"> 
+          <span className="text-xs sm:text-sm md:text-base lg:text-lg text-cyan-400 font-bold"> 
             Status:
           </span>
-          <span className="text-xs sm:text-sm md:text-base lg:text-lg font-extrabold text-yellow-400">
+          <span className="text-xs sm:text-sm md:text-base lg:text-lg font-extrabold text-red-400">
             {status}
           </span>
         </p>
 
       <p className="text-xs sm:text-sm md:text-base lg:text-lg flex items-baseline gap-2 min-w-0">
-        <span className="whitespace-nowrap text-purple-400 font-extrabold shrink-0">
+        <span className="whitespace-nowrap text-cyan-400 font-extrabold shrink-0">
           Logged in as:
         </span>
         <span 
@@ -111,42 +111,42 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
         {/* Use navigate for routing */}
         <button
           onClick={goToProfile}
-          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
+          className="w-full px-4 py-2 rounded-md border-4 border-orange-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-orange-300"
         >
           Profile
         </button>
         <button
           onClick={goToMatches}
-          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
+          className="w-full px-4 py-2 rounded-md border-4 border-orange-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-orange-300"
         >
           Matches
         </button>
         <button
           onClick={goToLeaderboard}
-          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
+          className="w-full px-4 py-2 rounded-md border-4 border-orange-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-orange-300"
         >
           Leaderboard
         </button>
         <button
           onClick={goToGame}
-          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
+          className="w-full px-4 py-2 rounded-md border-4 border-orange-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-orange-300"
         >
           Game
         </button>
         <button
           onClick={handleLogout}
-          className="mt-2 px-2 py-2 rounded-md border-4 border-yellow-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-700"
+          className="w-full px-4 py-2 rounded-md border-4 border-orange-400 text-red-400 font-extrabold text-xs sm:text-sm md:text-base lg:text-lg hover:bg-orange-300"
         >
           Logout
         </button>
       </div>
       
       <section className="mt-5">
-        <h2 className="w-fit px-2 py-1 font-bold text-xs sm:text-sm md:text-base lg:text-lg border-2 rounded-xl hover:bg-red-500">
+        <h2 className="w-fit px-2 py-1 font-bold text-xs sm:text-sm md:text-base lg:text-lg border-3 border-blue-700 rounded-xl hover:bg-blue-300 text-blue-700">
           Notifications
         </h2>
         {notifs.length === 0 ? (
@@ -154,7 +154,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
         ) : (
           <ul className="mt-2 max-h-64 overflow-y-auto space-y-2 pr-5">
             {notifs.map((n) => (
-              <li key={n.id} className="rounded-md border-2 px-3 py-2 hover:bg-red-400">
+              <li key={n.id} className="rounded-md border-2 border-slate-500 px-3 py-2 hover:bg-slate-300">
                 <p className="text-xs sm:text-sm md:text-base lg:text-lg opacity-70">
                   {new Date(n.createdAt).toLocaleString()}
                 </p>
@@ -166,7 +166,7 @@ export default function HomePage({ onLogout }: { onLogout: () => void }) {
           </ul>
         )}
       </section>
-      <h3 className="mt-2 px-2 py-1 w-fit border-4 border-pink-400 font-bold hover:bg-pink-400">Me</h3>
+      <h3 className="mt-2 px-2 py-1 w-fit border-4 border-emerald-700 font-extrabold text-emerald-700 hover:bg-emerald-400">Me</h3>
       <pre className="p-3 bg-black text-white overflow-x-auto whitespace-pre-wrap break-words">
         {JSON.stringify(meUserPreview, null, 2)}
       </pre>

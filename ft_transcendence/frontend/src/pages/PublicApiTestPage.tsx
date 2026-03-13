@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { publicItemsApiKeyTest } from "../api";
+import { useNavigate } from "react-router-dom";
 
 const API_KEY = import.meta.env.VITE_PUBLIC_API_KEY ?? "";
 
@@ -37,6 +38,8 @@ export default function PublicApiTestPage() {
   const [lastId, setLastId] = useState<number | null>(null);
   
   const [idInput, setIdInput] = useState<string>("");
+  
+  const navigate = useNavigate(); // Hook to navigate to different routes
 
   async function runList() {
     setOut("loading...");
@@ -121,36 +124,48 @@ export default function PublicApiTestPage() {
 
 
   return (
-    <div style={{ maxWidth: 900, margin: "48px auto", padding: 24 }}>
-      <h1>Public API test</h1>
+  <div className="px-4 py-8 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
+    <div className="px-2 py-1 pt-5 pb-5 border-4 border-yellow-400 block w-full mx-auto sm:max-w-2xl md:max-w-4xl lg:max-w-6xl">
+      <h1 className="block w-fit mx-auto px-2 py-1 border-4 hover:bg-zinc-400 rounded-md text-center font-extrabold text-xs sm:text-sm md:text-base lg:text-base">Public API test</h1>
       
-      <div style={{ display: "flex", gap:10, flexWrap: "wrap" }}>
-        <button onClick={runList} style={{ padding: 10 }}>
+      <div className="mt-8 flex flex-wrap gap-3 items-center justify-center">
+        <button
+          onClick={runList}
+          className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
+        >
           GET /public/items
         </button>
       
-        <button onClick={runCreate} style={{ padding: 10 }}>
+        <button
+          onClick={runCreate}
+          className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
+        >
           POST /public/items
         </button>
       
-        <button onClick={runGetOne} style={{ padding: 10 }} disabled={lastId === null}>
+        <button
+          onClick={runGetOne}
+          disabled={lastId === null}
+          className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
+        >
           GET /public/items/:id
         </button>
       
-        <button onClick={runUpdate} style={{ padding: 10 }} disabled={lastId === null}>
+        <button
+          onClick={runUpdate}
+          disabled={lastId === null}
+          className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
+        >
           PUT /public/items/:id
         </button>
       
-        <button onClick={runDelete} style={{ padding: 10 }} disabled={lastId === null}>
+        <button
+          onClick={runDelete}
+          disabled={lastId === null}
+          className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
+        >
           DELETE /public/items/:id
         </button>
-        
-        <input
-          value={idInput}
-          onChange={(e) => setIdInput(e.target.value)}
-          placeholder="id to delete"
-          style={{ padding: 10, width: 140 }}
-        />
         
         <button
           onClick={async () => {
@@ -170,34 +185,38 @@ export default function PublicApiTestPage() {
               setOut(`failed: ${e?.message ?? e}`);
             }
           }}
-          style={{ padding: 10 }}
+          className="px-2 py-1 border-4 border-red-600 text-red-600 font-bold hover:bg-red-300 rounded-xl text-xs sm:text-sm md:text-base lg:text-base"
         >
-          DELETE by id
+          DELETE by id  
         </button>
+        <input
+          value={idInput}
+          onChange={(e) => setIdInput(e.target.value)}
+          placeholder="Id to delete"
+          className="text-center border-3 border-red-600 text-red-600 font-bold hover:bg-red-300 w-24 rounded-md text-xs sm:text-sm md:text-base lg:text-base focus:ring-0 outline-none"
+        />
       </div>
     
-      <div style={{ marginTop: 12, opacity: 0.85 }}>
+      <div className="mt-5 px-2 py-1 block w-fit mx-auto border-2 border-emerald-700 rounded-md text-emerald-700 font-bold hover:bg-emerald-400 text-xs sm:text-sm md:text-base lg:text-base">
         Last created id: <b>{lastId ?? "-"}</b>
         {!API_KEY ? (
-          <span style={{ marginLeft: 10, color: "#ffb" }}>
+          <span>
             (VITE_PUBLIC_API_KEY is missing)
           </span>
         ) : null}
       </div>
       
-      <pre
-        style={{
-          marginTop: 16,
-          background: "#111",
-          color: "#eee",
-          padding: 12,
-          borderRadius: 8,
-          overflowX: "auto",
-        }}
-      >
+      <pre className="mt-2 font-bold text-center overflow-x-auto text-xs sm:text-sm md:text-base lg:text-base">
         {out}
       </pre>
+       
     </div>
+    <button
+      onClick={() => navigate("/")}
+      className="mt-5 w-1/2 border-3 px-2 py-1 block w-fit mx-auto text-xs sm:text-sm md:text-base lg:text-lg rounded-xl text-fuchsia-500 border-fuchsia-500 hover:bg-fuchsia-200 font-bold"
+    >
+      Back to Home
+    </button> {/* Use navigate() for routing */}
+  </div>
   );
 }
-

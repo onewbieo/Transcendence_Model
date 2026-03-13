@@ -72,46 +72,46 @@ export default function FirstSetupPage({ onSetupComplete }: {onSetupComplete?: (
 
   return (
   <div className="px-4 py-8 w-full max-h-[calc(95dvh-6rem)] overflow-y-auto">
-    <div className="px-2 py-1 pt-5 pb-5 mx-auto w-fit border-3 border-slate-300">
-      <h1 className="text-center font-bold">Create Admin User</h1>
+    <div className="px-2 py-1 pt-5 pb-5 mx-auto border-4 border-yellow-300 sm:max-w-sm md:max-w-md lg:max-w-lg">
+      <h1 className="px-2 py-1 block w-fit mx-auto rounded-md text-center font-bold border-3 hover:bg-zinc-400">Create Admin User</h1>
       <form onSubmit={handleFirstSetup} noValidate className="grid gap-3">
-        <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
-          <span className="w-20 text-right">Email</span>
+        <label className="mt-6 flex gap-2 items-center text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="text-cyan-500 font-bold">Email</span>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onBlur={() => setEmail((v) => v.trim().toLowerCase())}
             type="email"
-            className="w-56 border px-2 py-1"
+            className="w-full border-3 border-slate-400 px-2 py-1 focus:ring-0 outline-none"
           />
         </label>
 
-        <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
-          <span className="w-20 text-right">Password</span>
+        <label className="mt-2 flex items-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="text-left text-cyan-500 font-bold">Password</span>
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
-            className="w-56 border px-2 py-1 "
+            className="w-full border-3 border-slate-400 px-2 py-1 focus:ring-0 outline-none"
           />
         </label>
 
-        <label className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base lg:text-lg">
-          <span className="w-20 text-right">Name</span>
+        <label className="mt-2 flex gap-2 items-center text-xs sm:text-sm md:text-base lg:text-lg">
+          <span className="font-bold text-cyan-500">Name</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             type="text"
-            className="w-56 border px-2 py-1"
+            className="w-full border-3 border-slate-400 px-2 py-1 focus:ring-0 outline-none"
           />
         </label>
 
-        <button type="submit" className="px-2 py-1 w-fit mx-auto border text-xs sm:text-sm md:text-base lg:text-lg hover:bg-red-400" disabled={loading}>
+        <button type="submit" className="px-2 py-1 w-fit mx-auto border-4 border-blue-700 text-blue-700 font-bold rounded-xl text-xs sm:text-sm md:text-base lg:text-lg hover:bg-blue-300" disabled={loading}>
           {loading ? "Creating..." : "Create Admin"}
         </button>
       </form>
 
-      <p className="mt-2 text-center font-bold text-xs sm:text-sm md:text-base lg:text-lg">{status}</p>
+      <p className="mt-3 text-center font-extrabold text-red-500 text-xs sm:text-sm md:text-base lg:text-lg">{status}</p>
     </div>
   </div>
   );

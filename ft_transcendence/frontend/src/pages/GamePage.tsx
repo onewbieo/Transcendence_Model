@@ -34,7 +34,7 @@ type ClientMsg =
 const WIDTH = 800;
 const HEIGHT = 600;
 
-export default function GamePage({ goHome }: { goHome: () => void }) {
+export default function GamePage() {
   const wsRef = useRef<WebSocket | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const navigate = useNavigate(); // use navigate for page redirection
@@ -200,7 +200,6 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     }
     
     // IMPORTANT: passive:false lets preventDefault actually work
-
     window.addEventListener("keydown", onKeyDown, { passive: false });
     window.addEventListener("keyup", onKeyUp, { passive: false});
     return () => {
@@ -248,46 +247,126 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
   }, [state]);
 
   return (
-    <div style={{ maxWidth: 1100, margin: "24px auto", padding: 24 }}>
-      <h1>Game Room</h1>
+    <div className="block w-full mx-auto my-6 p-6 max-h-[calc(95dvh-6rem)] overflow-y-auto">
+      <h1 className="block w-fit mx-auto px-2 py-1 border-3 font-bold rounded-md hover:bg-zinc-400 text-center">Game Room</h1>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={() => navigate("/")}>Back to Home</button> {/* Use navigate() for routing */}
-        <button onClick={connect}>Reconnect WS</button>
-        <button onClick={() => send({ type: "queue:join" })}>Join Queue</button>
-        <button onClick={() => send({ type: "queue:leave" })}>Leave Queue</button>
-        <button onClick={() => send({ type: "match:reconnect" })}>Reconnect Match</button>
-        <button onClick={() => send({ type: "ping" })}>Ping</button>
-        <button onClick={() => send({ type: "game:pause", paused: true })}>Pause</button>
-        <button onClick={() => send({ type: "game:pause", paused: false })}>Resume</button>
+      <div className="mt-5 flex flex-wrap gap-2 items-center justify-center">
+        <button
+          onClick={() => navigate("/")}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"
+        >
+          Back to Home
+        </button> {/* Use navigate() for routing */}
+        <button
+          onClick={connect}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"
+        >
+          Reconnect WS
+        </button>
+        <button
+          onClick={() => send({ type: "queue:join" })}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"
+        >
+          Join Queue
+        </button>
+        <button
+          onClick={() => send({ type: "queue:leave" })}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"
+        >
+          Leave Queue
+        </button>
+        <button
+          onClick={() => send({ type: "match:reconnect" })}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"  
+        >
+          Reconnect Match
+        </button>
+        <button
+          onClick={() => send({ type: "ping" })}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"
+        >
+          Ping
+        </button>
+        <button
+          onClick={() => send({ type: "game:pause", paused: true })}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"  
+        >
+          Pause
+        </button>
+        <button
+          onClick={() => send({ type: "game:pause", paused: false })}
+          className="border-2 border-orange-500 text-orange-500 font-bold rounded-md px-2 py-1 hover:bg-orange-300"  
+        >
+          Resume
+        </button>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <div>
-          WS: <b>{wsStatus}</b>
-          <span style={{ opacity: 0.7 }}>
+      <div className="mt-3">
+        <div className="flex gap-2 items-center justify-center text-red-500">
+          <span className="">
+            WS:
+          </span>
+          <span className="font-bold">
+            {wsStatus}
+          </span>
+          <span className="opacity-70">
             (readyState={wsRef.current?.readyState ?? "null"})
           </span>
         </div>
-        <div>
-          Match: <b>{matchId}</b> | You are: <b>{role}</b>
+        <div className="mt-2 flex gap-2 items-center justify-center text-indigo-700">
+          <span className="">
+            Match:
+          </span>
+          <span className="">
+            {matchId}
+          </span>
+          <span className="">
+            | You are:
+          </span>
+          <span className="">
+            {role}
+          </span>
         </div>
-        <div style={{ opacity: 0.8, marginTop: 6 }}>
-          Controls: <b>W/S</b> or <b>↑/↓</b>, Pause toggle: <b>P</b>
+        <div className="mt-2 flex flex-wrap gap-2 items-center justify-center text-emerald-600">
+          <span className="">
+            Controls:
+          </span>
+          <span className="font-bold">
+            W / S
+          </span>
+          <span className="">
+            Or
+          </span>
+          <span className="">
+            ↑ /↓ ,
+          </span>
+          <span className="">
+            Pause toggle:
+          </span>
+          <span className="">
+            P
+          </span>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-start" }}>
-        <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} style={{ border: "1px solid #333", borderRadius: 8 }} />
+      <div className="mt-2 flex flex-col gap-6 items-center">
+        <div className="w-[clamp(290px,min(92vw,calc((100dvh-14rem)*4/3)),660px)] aspect-[4/3]">
+          <canvas
+            ref={canvasRef}
+            width={WIDTH}
+            height={HEIGHT}
+            className="border-3 block h-full w-full rounded-lg border-yellow-300"
+          />
+        </div>
 
-        <div style={{ flex: 1 }}>
-          <h3 style={{ marginTop: 0 }}>Log (latest first)</h3>
-          <div style={{ background: "#111", color: "#eee", padding: 12, borderRadius: 8, minHeight: 240 }}>
+        <div className="hidden w-full flex-1">
+          <h3 className="">Log (latest first)</h3>
+          <div className="min-h-[240px] rounded-lg bg-black p-3 text-white">
             {log.length === 0 ? <div>(empty)</div> : log.map((l, i) => <div key={i}>{l}</div>)}
           </div>
 
-          <h3>State snapshot</h3>
-          <pre style={{ background: "#111", color: "#eee", padding: 12, borderRadius: 8, overflowX: "auto" }}>
+          <h3 className="mt-2">State snapshot</h3>
+          <pre className="overflow-x-auto rounded-lg bg-black p-3 text-white">
             {JSON.stringify(state, null, 2)}
           </pre>
         </div>
@@ -295,4 +374,3 @@ export default function GamePage({ goHome }: { goHome: () => void }) {
     </div>
   );
 }
-
