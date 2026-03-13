@@ -1,17 +1,17 @@
 # ft_transcendence Evaluation Execution Plan
 
-## 0) How to use this file
+## 0) How to use this file (NOTED)
 - Run this checklist in order.
-- Mark each item as `DONE`, `PARTIAL`, or `BLOCKED` during preparation.
+- Mark each item as `DONE`, `PARTIAL`, `NOTED` or `BLOCKED` during preparation.
 - Do not claim modules unless they are demonstrable end-to-end.
 
-## 1) Team Oral Defense (Mandatory)
+## 1) Team Oral Defense (Mandatory) (NOTED)
 - Ask each member to explain assigned role (PO, PM/Scrum, Tech Lead, Developer).
 - Ask each member to explain specific contributions.
 - Ask each member to explain at least one personally implemented feature/module.
 - Pass criteria: every member can explain role + concrete contribution without ambiguity.
 
-## 2) README Verification (Chapter VI)
+## 2) README Verification (Chapter VI) (NOTED)
 - Verify project name + description are clear.
 - Verify team members and assigned roles are present.
 - Verify project management approach is documented.
@@ -22,35 +22,35 @@
 - Verify individual contribution section is complete.
 - Pass criteria: README is complete, coherent, and aligned with what can be demonstrated.
 
-## 3) Project Coherence Check
+## 3) Project Coherence Check (NOTED)
 - Ask at least 2 team members to explain project concept.
 - Ask at least 2 team members to explain main technologies and reasons.
 - Ask at least 2 team members to explain team coordination model.
 - Pass criteria: explanations are consistent across members.
 
-## 4) Git Collaboration Evidence
+## 4) Git Collaboration Evidence (NOTED)
 - Verify commits from all team members.
 - Verify commit messages are meaningful.
 - Verify work distribution across team is visible.
 - Pass criteria: repository history reflects real group collaboration.
 
-## 5) Architecture Components
+## 5) Architecture Components (DONE)
 - Verify frontend exists and is functioning.
 - Verify backend exists and is functioning.
 - Verify database exists and is functioning.
 - Pass criteria: all three parts are integrated and demonstrable.
 
-## 6) Deployment
+## 6) Deployment (NOTED)
 - Run single-command deployment with Docker.
 - Verify app is reachable and functional after boot.
 - Pass criteria: evaluator can reproduce deployment with one command.
 
-## 7) Browser Compatibility
+## 7) Browser Compatibility (NOTED)
 - Run full demo flow on latest stable Chrome.
 - Check DevTools console for errors/warnings.
 - Pass criteria: no critical console issues in demonstration path.
 
-## 8) Privacy Policy and Terms
+## 8) Privacy Policy and Terms (NOTED)
 - Verify both pages are accessible (footer links).
 - Verify both pages contain relevant non-placeholder content.
 - Pass criteria: both pages satisfy mandatory content/accessibility requirement.
@@ -66,7 +66,7 @@
 - Prepare explanation for evaluator on styling approach used across pages.
 - Pass criteria: team can justify styling approach used consistently.
 
-### 9.3 Environment variable security
+### 9.3 Environment variable security (DONE)
 - Keep real `.env` and `.env.docker` out of Git.
 - Keep `.env.example` tracked for backend and frontend.
 - Verify no secrets are present in tracked files.
@@ -185,6 +185,11 @@ Goal: identify where blocked secret values came from and prevent repeat incident
 - Rotate any exposed credential in provider console immediately.
 - Pass criteria:
   - no tracked real secrets, push protection passes consistently.
+
+## 20) Check Backend `api_key` Necessity
+- Confirm whether lowercase `api_key` in `ft_transcendence/backend/.env` is used by any runtime code, Prisma config, or scripts.
+- If unused, remove it from local `.env` and keep only required variables documented in `.env.example`.
+- Pass criteria: backend env contains only actively used keys; no unclear legacy key remains.
 
 ---
 

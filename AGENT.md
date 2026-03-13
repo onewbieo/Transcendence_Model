@@ -4,11 +4,11 @@
 This guide is focused on **42 ft_transcendence v20 evaluation readiness** for this repo.
 
 Current stack:
-- Frontend: React + Vite (`ft_transcendence/frontend`)
-- Backend: Fastify + TypeScript (`ft_transcendence/backend`)
-- ORM/DB: Prisma + PostgreSQL
-- Realtime: WebSocket Pong (`/ws/game`)
-- Infra: Docker Compose + Nginx TLS proxy
+- Frontend: React + Vite (`ft_transcendence/frontend`) - the part people see and click in the browser.
+- Backend: Fastify + TypeScript (`ft_transcendence/backend`) - the server "brain" that handles logic and data.
+- ORM/DB: Prisma + PostgreSQL - Prisma is a helper that talks to PostgreSQL (the data storage).
+- Realtime: WebSocket Pong (`/ws/game`) - both players see game updates instantly.
+- Infra: Docker Compose + Nginx TLS proxy - Docker runs app parts in containers; Nginx is the front door; TLS means encrypted/secure traffic (HTTPS lock icon).
 
 ## Evaluated Module Baseline (from current implementation)
 ### Likely claimable now
@@ -46,20 +46,23 @@ Your `README.md` should explicitly include:
 
 ## Run Modes
 ### Local HTTP development
+Use this for fast coding on your own machine.
 1. `cd ft_transcendence`
 2. `docker compose up -d postgres`
 3. `cd backend && npm run dev`
 4. New shell: `cd ft_transcendence/frontend && npm run dev`
 
 ### Docker HTTPS mode
+Use this for near-real deployment behavior (everything together, with HTTPS).
 1. `cd ft_transcendence`
 2. `docker compose up --build`
 
 Entrypoints:
-- `http://localhost:8080` -> redirect
-- `https://localhost:8443` -> frontend + proxied `/api`, `/ws`, `/uploads`
+- `http://localhost:8080` -> redirect (automatically sends you to secure HTTPS URL)
+- `https://localhost:8443` -> frontend + proxied `/api`, `/ws`, `/uploads` (single gateway that forwards traffic to correct service)
 
 ## Required Environment Variables
+Environment variables are private settings (keys/URLs/secrets) loaded from `.env` files.
 Backend:
 - `DATABASE_URL`
 - `JWT_SECRET`

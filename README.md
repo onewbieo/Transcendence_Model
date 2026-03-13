@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by <login1>, <login2>, <login3>, <login4>[, <login5>].*
+*This project has been created as part of the 42 curriculum by <apoh>, <bwee>, <seayeo>, <bsim>.*
 
 # ft_transcendence - Surprise
 
@@ -39,18 +39,19 @@ ft_transcendence/
 
 ### Environment configuration
 Important files:
-- Local backend env: `ft_transcendence/backend/.env` (local dev)
-- Docker backend env template in repo: `ft_transcendence/backend/env.docker`
-- Docker backend env used by compose: `ft_transcendence/backend/.env.docker`
-- Frontend env: `ft_transcendence/frontend/.env`
+- Docker backend env (required for Docker run): `ft_transcendence/backend/.env.docker`
+- Local backend env (only for local `npm run dev`): `ft_transcendence/backend/.env`
+- Frontend env (optional): `ft_transcendence/frontend/.env`
 
-If `.env.docker` does not exist, create it from `env.docker`:
-```bash
-cd ft_transcendence/backend
-cp env.docker .env.docker
-```
+Templates:
+- Backend template: `ft_transcendence/backend/.env.example`
+- Frontend template: `ft_transcendence/frontend/.env.example`
 
-Then update secrets/keys in your local env files (do not commit real secrets).
+If `.env.docker` does not exist, create it manually using keys from `.env.example`, then set Docker-specific values.
+- Example: in Docker mode, `DATABASE_URL` should use host `postgres` (from docker compose service name).
+- OAuth values (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) must come from your Google Cloud OAuth app.
+
+Update secrets/keys in your local env files and do not commit real secrets.
 
 ### Run with Docker (HTTPS)
 ```bash
@@ -85,7 +86,7 @@ Endpoints:
 
 Note:
 - Vite proxies `/api`, `/ws`, and `/uploads` to backend in local mode.
-- Do not run `npm run dev` frontend/backend at the same time as full Docker HTTPS stack.
+- Do not run `npm run dev` frontend/backend at the same time as full Docker HTTPS stack, because this starts two separate app instances (local + Docker) and can cause mixed cookies/sessions, env mismatches, and confusing test results.
 
 ## Team Information
 Update this section with your final real team data before submission.
@@ -119,7 +120,7 @@ Update this section with your final real team data before submission.
 - React Router
 
 Justification:
-- fast iteration for SPA pages and realtime integration
+- fast iteration for SPA(Single Page Application) pages and realtime integration 
 - clean separation of pages, API layer, and auth/ws helpers
 
 ### Backend
@@ -256,4 +257,3 @@ AI-generated output was always:
 - discussed with peers when behavior/logic was critical
 
 No AI-generated code was accepted blindly.
-
