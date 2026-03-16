@@ -197,24 +197,24 @@ export default function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       ) : (
         <form onSubmit={onSubmitOtp} className="grid gap-3">
           <label className="mt-2 grid text-center gap-2">
-            <span>2FA code</span>
+            <span className="font-extrabold text-pink-500">2FA code</span>
             <input
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder="123456"
-              className="w-fit mx-auto border rounded-md text-center px-4 py-2"
+              className="w-fit mx-auto border-2 border-slate-400 rounded-md text-center px-4 py-2 focus:ring-0 outline-none"
             />
           </label>
           
-          <button type="submit" className="mt-2 px-4 py-2 w-fit mx-auto border text-xs sm:text-sm md:text-base lg:text-lg hover:bg-lime-400">
+          <button type="submit" className="mt-2 px-4 py-2 w-fit mx-auto border-4 border-blue-700 rounded-xl text-xs sm:text-sm md:text-base lg:text-lg font-bold text-blue-700 hover:bg-blue-300">
             Verify
           </button>
           
           <button
             type="button"
-            className="px-4 py-2 w-fit mx-auto border text-xs sm:text-sm md:text-base lg:text-lg hover:bg-lime-400"
+            className="px-4 py-2 w-fit mx-auto border-4 border-emerald-700 rounded-xl text-xs sm:text-sm md:text-base lg:text-lg font-bold text-emerald-700 hover:bg-emerald-500"
             onClick={resetToLogin}
           >
             Back

@@ -89,16 +89,27 @@ export default function MatchesPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((m) => (
-                <tr key={m.id} className="border border-slate-300">
-                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-red-500">{m.id}</td>
-                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-cyan-500">{new Date(m.createdAt).toLocaleString()}</td>
-                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-emerald-600">{m.status}</td>
-                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-orange-400">{m.player1Score} - {m.player2Score}</td>
-                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-pink-400">{m.winnerId ?? "DRAW"}</td>
-                  <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-indigo-400">{m.durationMs ? `${Math.round(m.durationMs / 1000)}s` : "-"}</td>
-                </tr>
-              ))}
+              {rows.map((m) => {
+                const winnerLabel =
+                  m.winnerId === null
+                    ? "DRAW"
+                    : m.winner?.name?.trim()
+                      ? m.winner.name
+                      : m.winner?.email?.trim()
+                        ? m.winner.email
+                        : `User #${m.winnerId}`;
+
+                return (
+                  <tr key={m.id} className="border border-slate-300">
+                    <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-red-500">{m.id}</td>
+                    <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-cyan-500">{new Date(m.createdAt).toLocaleString()}</td>
+                    <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-emerald-600">{m.status}</td>
+                    <td className="px-1 text-xs sm:text-sm md:text-base lg:text-base whitespace-nowrap text-orange-400">{m.player1Score} - {m.player2Score}</td>
+                    <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-pink-400">{winnerLabel}</td>
+                    <td className="px-1 text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap text-indigo-400">{m.durationMs ? `${Math.round(m.durationMs / 1000)}s` : "-"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           </div>
@@ -121,4 +132,3 @@ export default function MatchesPage() {
   </div>
   );
 }
-

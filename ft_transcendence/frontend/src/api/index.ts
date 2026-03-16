@@ -139,6 +139,9 @@ export type MatchRow = {
   player2Score: number;
   winnerId: number | null;
   durationMs: number | null;
+  player1: { id: number; email: string; name: string | null } | null;
+  player2: { id: number; email: string; name: string | null } | null;
+  winner: { id: number; email: string; name: string | null } | null;
 };
 
 export async function matches(params?: { take?: number; cursor?: number | null }): Promise<{ items: MatchRow[]; nextCursor: number | null }> {

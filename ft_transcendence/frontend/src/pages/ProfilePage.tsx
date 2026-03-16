@@ -240,7 +240,7 @@ export default function ProfilePage() {
           Update Password
         </button>
         <div
-          className="opacity-90">{pwStatus}
+          className="mt-3 text-center font-extrabold text-red-500 opacity-90">{pwStatus}
         </div>
       </label>  
       
@@ -271,7 +271,7 @@ export default function ProfilePage() {
                   value={twoFaCode}
                   onChange={(e) => setTwoFaCode(e.target.value)}
                   inputMode="numeric"
-                  className="border border-slate-500 rounded-md text-center px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg focus:ring-0 outline-none"
+                  className="border-2 border-slate-400 rounded-md text-center px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg focus:ring-0 outline-none"
                 />
                 
                 <button onClick={onEnableTwoFa} className="border-4 rounded-xl border-pink-600 text-pink-600 font-bold hover:bg-pink-300 px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg ">
@@ -287,10 +287,10 @@ export default function ProfilePage() {
               value={twoFaDisableCode}
               onChange={(e) => setTwoFaDisableCode(e.target.value)}
               inputMode="numeric"
-              className="border mt-4 text-center px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg"
+              className="border-2 border-slate-400 rounded-xl mt-4 text-center px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg focus:ring-0 outline-none"
             />
             
-            <button onClick={onDisableTwoFa} className="border px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg">
+            <button onClick={onDisableTwoFa} className="border-4 rounded-xl px-2 py-1 text-xs sm:text-sm md:text-base lg:text-lg font-bold text-pink-400 hover:bg-pink-300">
               Disable 2FA
             </button>
           </>

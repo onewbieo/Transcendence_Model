@@ -63,6 +63,27 @@ export async function matchRoutes(app: FastifyInstance) {
           player2Score: true,
           winnerId: true,
           durationMs: true,
+          player1: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          player2: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          winner: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
       
@@ -110,6 +131,27 @@ export async function matchRoutes(app: FastifyInstance) {
           player2Score: true,
           winnerId: true,
           durationMs: true,
+          player1: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          player2: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          winner: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
 
@@ -149,6 +191,27 @@ export async function matchRoutes(app: FastifyInstance) {
           player2Score: true,
           winnerId: true,
           durationMs: true,
+          player1: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          player2: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          winner: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
 
