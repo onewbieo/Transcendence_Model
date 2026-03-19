@@ -42,13 +42,13 @@ export default function PublicApiTestPage() {
   const navigate = useNavigate(); // Hook to navigate to different routes
 
   async function runList() {
-    setOut("loading...");
+    setOut("Loading...");
     try {
       const data = await publicItemsApiKeyTest();
       setOut(JSON.stringify(data, null, 2));
     }
     catch (e: any) {
-      setOut(`failed: ${e?.message ?? e}`);
+      setOut(`Failed: ${e?.message ?? e}`);
     }
   }
 
@@ -71,7 +71,7 @@ export default function PublicApiTestPage() {
       setOut(JSON.stringify(data, null, 2));
     }
     catch (e: any) {
-      setOut(`failed: ${e?.message ?? e}`);
+      setOut(`Failed: ${e?.message ?? e}`);
     }
   }
 
@@ -84,7 +84,7 @@ export default function PublicApiTestPage() {
       setOut(JSON.stringify(data, null, 2));
     }
     catch (e: any) {
-      setOut(`failed: ${e?.message ?? e}`);
+      setOut(`Failed: ${e?.message ?? e}`);
     }
   }
   
@@ -104,7 +104,7 @@ export default function PublicApiTestPage() {
       setOut(JSON.stringify(data, null, 2));
     }
     catch (e: any) {
-      setOut(`failed: ${e?.message ?? e}`);
+      setOut(`Failed: ${e?.message ?? e}`);
     }
   }
   
@@ -118,7 +118,7 @@ export default function PublicApiTestPage() {
       setLastId(null);
     }
     catch (e: any) {
-      setOut(`failed: ${e?.message ?? e}`);
+      setOut(`Failed: ${e?.message ?? e}`);
     }
   }
 
@@ -182,7 +182,7 @@ export default function PublicApiTestPage() {
               if (lastId === id) setLastId(null);
             }
             catch (e: any) {
-              setOut(`failed: ${e?.message ?? e}`);
+              setOut(`Failed: ${e?.message ?? e}`);
             }
           }}
           className="px-2 py-1 border-4 border-red-600 text-red-600 font-bold hover:bg-red-300 rounded-xl text-xs sm:text-sm md:text-base lg:text-base"

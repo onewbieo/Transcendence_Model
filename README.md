@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by <apoh>, <bwee>, <seayeo>, <bsim>.*
+*This project has been created as part of the 42 curriculum by apoh, bwee, seayeo, bsim.*
 
 # ft_transcendence - Surprise
 
@@ -24,8 +24,8 @@ Primary features:
 ## Instructions
 ### Prerequisites
 - Docker and Docker Compose
-- Node.js 20+ and npm (for local non-docker development)
-- Google OAuth credentials (if testing OAuth flow)
+- Node.js 20+ and npm (only for local non-docker development)
+- Google OAuth credentials (only if testing Google login)
 
 ### Project structure
 ```text
@@ -97,7 +97,7 @@ Update this section with your final real team data before submission.
 | `<login2>` | Project Manager / Scrum Master, Developer | Planning, tracking, risk/blocker follow-up, contributor |
 | `<login3>` | Technical Lead / Architect, Developer | Architecture decisions, code quality, critical reviews, contributor |
 | `<login4>` | Developer | Feature implementation, testing, documentation |
-| `<login5>` (optional) | Developer | Feature implementation, testing, documentation |
+
 
 ## Project Management
 ### Work organization
@@ -162,67 +162,39 @@ Schema source:
 ## Features List
 | Feature | Description | Team Member(s) |
 |---|---|---|
-| Email/password auth | Signup/login with hashed password and JWT | `<login?>` |
-| OAuth 2.0 (Google) | Login via Google with callback handling | `<login?>` |
-| 2FA (TOTP) | Setup, enable, verify, disable 2FA | `<login?>` |
-| Profiles + avatar | Update profile data and upload avatar | `<login?>` |
-| Role permissions | ADMIN/USER guards and admin CRUD actions | `<login?>` |
-| Realtime Pong | WebSocket queue, match start, live state sync | `<login?>` |
-| Reconnect flow | Grace period, reconnect, match resolution | `<login?>` |
-| Match history + leaderboard | Match storage/query and ranking display | `<login?>` |
-| Public API | API key + rate limit + CRUD + docs | `<login?>` |
-| Notifications | Notification creation for key actions | `<login?>` |
-| Privacy + Terms pages | Accessible legal pages in app footer | `<login?>` |
+| Email/password auth | Signup/login with hashed password and JWT | apoh |
+| OAuth 2.0 (Google) | Login via Google with callback handling | apoh |
+| 2FA (TOTP) | Setup, enable, verify, disable 2FA | apoh |
+| Profiles + avatar | Update profile data and upload avatar | bwee |
+| Role permissions | ADMIN/USER guards and admin CRUD actions | apoh |
+| Realtime Pong | WebSocket queue, match start, live state sync | apoh, seayeo |
+| Reconnect flow | Grace period, reconnect, match resolution | apoh |
+| Match history + leaderboard | Match storage/query and ranking display | apoh, bsim |
+| Public API | API key + rate limit + CRUD + docs | apoh |
+| Notifications | Notification creation for key actions | apoh, bsim |
+| Privacy + Terms pages | Accessible legal pages in app footer | bsim, seayeo |
 
 ## Modules
 ### Claimed modules and points
 | Category | Module | Type | Points | Implementation summary | Team Member(s) |
 |---|---|---:|---:|---|---|
-| Web | Framework for frontend + backend | Major | 2 | React frontend + Fastify backend | `<login?>` |
-| Web | ORM | Minor | 1 | Prisma with PostgreSQL migrations | `<login?>` |
-| Web | Realtime features | Major | 2 | WebSocket Pong + connection/reconnect handling | `<login?>` |
-| Web | Public API (API key + rate limit + docs + CRUD endpoints) | Major | 2 | `/public/items` CRUD + x-api-key + rate limit + `/api/docs` | `<login?>` |
-| Web | Complete notification system | Minor | 1 | Notifications integrated across CRUD-related user flows | `<login?>` |
-| User Management | Game statistics and match history | Minor | 1 | Match history + leaderboard + wins aggregation | `<login?>` |
-| User Management | OAuth 2.0 | Minor | 1 | Google OAuth endpoints and frontend callback flow | `<login?>` |
-| User Management | Advanced permissions system | Major | 2 | ADMIN/USER roles + admin user CRUD endpoints | `<login?>` |
-| User Management | Complete 2FA | Minor | 1 | TOTP setup/enable/verify/disable workflow | `<login?>` |
-| Gaming & UX | Complete web-based game | Major | 2 | Browser Pong with clear rules and win conditions | `<login?>` |
-| Gaming & UX | Remote players | Major | 2 | 2-player remote realtime gameplay + reconnection logic | `<login?>` |
+| Web | Framework for frontend + backend | Major | 2 | React frontend + Fastify backend | apoh, bwee, bsim |
+| Web | ORM | Minor | 1 | Prisma with PostgreSQL migrations | bsim |
+| Web | Realtime features | Major | 2 | WebSocket Pong + connection/reconnect handling | apoh, seayeo |
+| Web | Public API (API key + rate limit + docs + CRUD endpoints) | Major | 2 | `/public/items` CRUD + x-api-key + rate limit + `/api/docs` | apoh |
+| Web | Complete notification system | Minor | 1 | Notifications integrated across CRUD-related user flows | apoh, bsim |
+| User Management | Game statistics and match history | Minor | 1 | Match history + leaderboard + wins aggregation | apoh |
+| User Management | OAuth 2.0 | Minor | 1 | Google OAuth endpoints and frontend callback flow | apoh |
+| User Management | Advanced permissions system | Major | 2 | ADMIN/USER roles + admin user CRUD endpoints | apoh, bsim |
+| User Management | Complete 2FA | Minor | 1 | TOTP setup/enable/verify/disable workflow | apoh, bsim |
+| Gaming & UX | Complete web-based game | Major | 2 | Browser Pong with clear rules and win conditions | apoh, seayeo |
+| Gaming & UX | Remote players | Major | 2 | 2-player remote realtime gameplay + reconnection logic | apoh |
 
 Claimed total: **17 points**
 
 Note:
 - We count the framework major only once (we do not additionally count frontend/backend framework minors).
 - Final module claim is validated during peer evaluation demo.
-
-## Individual Contributions
-Fill this section with a detailed per-member breakdown before final submission.
-
-### `<login1>`
-- Implemented:
-- Challenges:
-- How solved:
-
-### `<login2>`
-- Implemented:
-- Challenges:
-- How solved:
-
-### `<login3>`
-- Implemented:
-- Challenges:
-- How solved:
-
-### `<login4>`
-- Implemented:
-- Challenges:
-- How solved:
-
-### `<login5>` (optional)
-- Implemented:
-- Challenges:
-- How solved:
 
 ## Mandatory Requirement Coverage
 - Web application with frontend + backend + database: yes

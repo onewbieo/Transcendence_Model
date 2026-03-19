@@ -12,7 +12,7 @@ import FirstSetupPage from "./pages/FirstSetupPage";
 import UserCreationPage from "./pages/UserCreationPage.tsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import UserListPage from "./pages/UserListPage";
-import { api } from "./api";
+import { api, me } from "./api";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import Footer from "./components/Footer";
@@ -22,6 +22,8 @@ export default function App() {
   const [hasToken, setHasToken] = useState<boolean>(() => !!getToken());
   const [isFirstTime, setIsFirstTime] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [authLoading, setAuthLoading] = useState<boolean>(() => !!getToken());
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Check token storage and first time setup state
   useEffect(() => {
@@ -29,6 +31,43 @@ export default function App() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncRole = async () => {
+      if (!hasToken) {
+        setUserRole(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      setAuthLoading(true);
+
+      try {
+        const data = await me();
+        if (!cancelled) {
+          setUserRole(data.me?.role ?? null);
+        }
+      }
+      catch {
+        if (!cancelled) {
+          setUserRole(null);
+        }
+      }
+      finally {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      }
+    };
+
+    syncRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasToken]);
   
   // Check if there are users (to decide if first setup is needed)
   useEffect(() => {
@@ -54,7 +93,7 @@ export default function App() {
     checkForUsers();
   }, []);
   
-  if (loading) {
+  if (loading || authLoading) {
     return <div>Loading...</div>;
   }
 
@@ -87,8 +126,7 @@ export default function App() {
               isFirstTime ? (
                 <Navigate to="/first-setup" replace />
               ) : hasToken ? (
-              // TODO: check role here
-              <HomePage onLogout={() => setHasToken(false)} />
+                <HomePage onLogout={() => setHasToken(false)} />
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -118,12 +156,23 @@ export default function App() {
           />
           <Route
             path="/create-user"
-            element={hasToken ? <UserCreationPage /> : <Navigate to="/login" replace /> } />
+            element={
+              hasToken ? (
+                userRole === "ADMIN" ? <UserCreationPage /> : <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
           <Route
             path="/admin"
             element={
               hasToken ? (
-                <AdminDashboardPage onLogout={() => setHasToken(false)} />
+                userRole === "ADMIN" ? (
+                  <AdminDashboardPage onLogout={() => setHasToken(false)} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -131,7 +180,13 @@ export default function App() {
           />
           <Route
             path="/admin/users"
-            element={hasToken ? <UserListPage /> : <Navigate to="/login" replace /> }
+            element={
+              hasToken ? (
+                userRole === "ADMIN" ? <UserListPage /> : <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
           />
          
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
