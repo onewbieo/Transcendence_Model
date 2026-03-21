@@ -145,7 +145,6 @@ export default function PublicApiTestPage() {
       
         <button
           onClick={runGetOne}
-          disabled={lastId === null}
           className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
         >
           GET /public/items/:id
@@ -153,7 +152,6 @@ export default function PublicApiTestPage() {
       
         <button
           onClick={runUpdate}
-          disabled={lastId === null}
           className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
         >
           PUT /public/items/:id
@@ -161,7 +159,6 @@ export default function PublicApiTestPage() {
       
         <button
           onClick={runDelete}
-          disabled={lastId === null}
           className="px-2 py-1 border-2 border-orange-500 text-orange-500 font-bold hover:bg-orange-300 rounded-md text-xs sm:text-sm md:text-base lg:text-base"
         >
           DELETE /public/items/:id
@@ -171,7 +168,11 @@ export default function PublicApiTestPage() {
           onClick={async () => {
             setOut("loading...");
             try {
-              const id = Number(idInput);
+              const raw = idInput.trim();
+              if (!raw)
+                throw new Error("Id is required");
+                
+              const id = Number(raw);
               if (!Number.isFinite(id))
                 throw new Error("Invalid id");
               await apiFetch(`/public/items/${id}`, { method: "DELETE" });
