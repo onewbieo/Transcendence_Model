@@ -12,7 +12,7 @@ const HEIGHT = 600;
 
 // game constant.ts values //
 
-const MAX_SCORE = 10;
+const MAX_SCORE = 1;
 
 const PADDLE_WIDTH = 20;
 const PADDLE_HEIGHT = 100;
