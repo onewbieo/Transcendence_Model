@@ -46,6 +46,7 @@ export default function GamePage() {
   const [state, setState] = useState<Extract<ServerMsg, { type: "game:state" }> | null>(null);
   
   const stateRef = useRef<Extract<ServerMsg, { type: "game:state" }> | null>(null);
+  const roleRef = useRef<Role | "-">("-");
   
   const connIdRef = useRef(0);
   
@@ -53,7 +54,25 @@ export default function GamePage() {
     stateRef.current = state;
   }, [state]);
 
+  useEffect(() => {
+    roleRef.current = role;
+  }, [role]);
+
   const wsUrl = useMemo(() => makeWsUrl("/game"), []);
+
+  function isMirroredView(currentRole: Role | "-") {
+    return currentRole === "P2";
+  }
+
+  function formatPauseMessage(message: string, currentRole: Role | "-") {
+    if (!isMirroredView(currentRole))
+      return message;
+    if (message === "LEFT SERVES")
+      return "RIGHT SERVES";
+    if (message === "RIGHT SERVES")
+      return "LEFT SERVES";
+    return message;
+  }
 
   function pushLog(line: string) {
     setLog((prev) => [line, ...prev].slice(0, 50));
@@ -117,6 +136,7 @@ export default function GamePage() {
       if (msg.type === "match:found") {
         setMatchId(msg.matchId);
         setRole(msg.youAre);
+        roleRef.current = msg.youAre;
       }
 
       if (msg.type === "match:reconnect_denied") {
@@ -128,13 +148,17 @@ export default function GamePage() {
       }
 
       if (msg.type === "game:over") {
+        const currentRole = roleRef.current;
+        const resultText =
+          currentRole === msg.winner ? "YOU WIN" : currentRole === "-" ? `${msg.winner} WINS` : "YOU LOSE";
+
         // Force final overlay onto canvas
         setState((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
             paused: true,
-            pauseMessage: `GAME OVER - ${msg.winner} WINS`,
+            pauseMessage: `GAME OVER - ${resultText}`,
             score: { p1: msg.score.p1, p2: msg.score.p2 },
           };
         });
@@ -217,6 +241,13 @@ export default function GamePage() {
     const ctx = c.getContext("2d");
     if (!ctx) return;
 
+    const mirrored = isMirroredView(role);
+    const leftPaddleY = mirrored ? s.p2.y : s.p1.y;
+    const rightPaddleY = mirrored ? s.p1.y : s.p2.y;
+    const ballX = mirrored ? WIDTH - s.ball.x : s.ball.x;
+    const leftScore = mirrored ? s.score.p2 : s.score.p1;
+    const rightScore = mirrored ? s.score.p1 : s.score.p2;
+
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
     // mid line
@@ -229,22 +260,22 @@ export default function GamePage() {
     const PADDLE_H = 100;
     const MARGIN = 40;
 
-    ctx.fillRect(MARGIN, s.p1.y, PADDLE_W, PADDLE_H);
-    ctx.fillRect(WIDTH - MARGIN - PADDLE_W, s.p2.y, PADDLE_W, PADDLE_H);
+    ctx.fillRect(MARGIN, leftPaddleY, PADDLE_W, PADDLE_H);
+    ctx.fillRect(WIDTH - MARGIN - PADDLE_W, rightPaddleY, PADDLE_W, PADDLE_H);
 
     ctx.beginPath();
-    ctx.arc(s.ball.x, s.ball.y, s.ball.r, 0, Math.PI * 2);
+    ctx.arc(ballX, s.ball.y, s.ball.r, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.font = "20px sans-serif";
-    ctx.fillText(`${s.score.p1} : ${s.score.p2}`, WIDTH / 2 - 30, 30);
+    ctx.fillText(`${leftScore} : ${rightScore}`, WIDTH / 2 - 30, 30);
 
     if (s.paused) {
       ctx.font = "28px sans-serif";
-      const msg = s.pauseMessage ?? "PAUSED";
+      const msg = formatPauseMessage(s.pauseMessage ?? "PAUSED", role);
       ctx.fillText(msg, WIDTH / 2 - ctx.measureText(msg).width / 2, HEIGHT / 2);
     }
-  }, [state]);
+  }, [role, state]);
 
   return (
     <div className="block w-full mx-auto my-6 p-6 max-h-[calc(95dvh-6rem)] overflow-y-auto">
@@ -359,7 +390,7 @@ export default function GamePage() {
           />
         </div>
 
-        <div className="hidden w-full flex-1">
+        <div className="w-full flex-1">
           <h3 className="">Log (latest first)</h3>
           <div className="min-h-[240px] rounded-lg bg-black p-3 text-white">
             {log.length === 0 ? <div>(empty)</div> : log.map((l, i) => <div key={i}>{l}</div>)}

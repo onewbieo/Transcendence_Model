@@ -1,0 +1,193 @@
+###############################################################################
+# DEV MODE
+###############################################################################
+
+cd /home/vboxuser/Main
+docker compose down -v
+docker compose up -d postgres
+
+cd /home/vboxuser/Main/backend
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run dev
+
+cd /home/vboxuser/Main/frontend
+npm install
+npm run dev
+
+cd /home/vboxuser/Main/backend
+npx prisma studio
+
+export BASE_URL='http://localhost:3000'
+export CURL_OPTS='-sS'
+export API_KEY='<paste-public-api-key>'
+
+whether server is alive at root path
+curl $CURL_OPTS "$BASE_URL/"
+
+check a particular endpoint whether its ok.
+curl $CURL_OPTS "$BASE_URL/health"
+
+check your /api/docs end point
+curl $CURL_OPTS "$BASE_URL/api/docs"
+
+checking first setup
+curl $CURL_OPTS "$BASE_URL/admin/first-setup"
+
+creating first admin user
+curl $CURL_OPTS -X POST "$BASE_URL/admin/first-setup" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123","name":"Admin"}'
+
+login admin user
+curl $CURL_OPTS -X POST "$BASE_URL/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123"}'
+
+export ADMIN_TOKEN='<paste-admin-jwt>'
+
+checking user status
+curl $CURL_OPTS "$BASE_URL/users/me?token=$ADMIN_TOKEN"
+
+checking game stats
+curl $CURL_OPTS "$BASE_URL/users/me/stats?token=$ADMIN_TOKEN"
+
+checking notification tables
+curl $CURL_OPTS "$BASE_URL/notifications?token=$ADMIN_TOKEN"
+
+change name
+curl $CURL_OPTS -X PATCH "$BASE_URL/users/me?token=$ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Admin Updated"}'
+
+change password
+curl $CURL_OPTS -X PATCH "$BASE_URL/users/me/password?token=$ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"oldPassword":"adminpassword123","newPassword":"adminpassword456"}'
+
+uploading file
+curl $CURL_OPTS -X POST "$BASE_URL/users/me/avatar?token=$ADMIN_TOKEN" \
+  -F 'file=@/absolute/path/to/avatar.png'
+
+create new user using admin
+curl $CURL_OPTS -X POST "$BASE_URL/admin/users?token=$ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user1@example.com","password":"password123","name":"User One","role":"USER"}'
+
+login new created user
+curl $CURL_OPTS -X POST "$BASE_URL/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user1@example.com","password":"password123"}'
+
+export USER1_TOKEN='<paste-user1-jwt>'
+
+use admin to check on list users
+curl $CURL_OPTS "$BASE_URL/admin/users?token=$ADMIN_TOKEN"
+
+use admin to check on newly created user. 
+curl $CURL_OPTS "$BASE_URL/admin/users/2?token=$ADMIN_TOKEN"
+
+admin updating user-details
+curl $CURL_OPTS -X PATCH "$BASE_URL/admin/users/2?token=$ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"User One Updated","role":"USER"}'
+
+manual signup of user
+curl $CURL_OPTS -X POST "$BASE_URL/auth/signup" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user2@example.com","password":"password123","name":"User Two"}'
+
+login of new user
+curl $CURL_OPTS -X POST "$BASE_URL/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user2@example.com","password":"password123"}'
+
+export USER2_TOKEN='<paste-user2-jwt>'
+
+friends(curl statement)
+curl $CURL_OPTS "$BASE_URL/users/search?q=user&token=$USER1_TOKEN"
+curl $CURL_OPTS -X POST "$BASE_URL/friends?token=$USER1_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"addresseeId":3}'
+curl $CURL_OPTS "$BASE_URL/friends?token=$USER1_TOKEN"
+curl $CURL_OPTS "$BASE_URL/friends/requests?token=$USER2_TOKEN"
+curl $CURL_OPTS -X PATCH "$BASE_URL/friends/2/accept?token=$USER2_TOKEN"
+curl $CURL_OPTS -X DELETE "$BASE_URL/friends/3?token=$USER1_TOKEN"
+
+creating a match
+curl $CURL_OPTS -X POST "$BASE_URL/matches?token=$ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"player1Id":1,"player2Id":2,"player1Score":5,"player2Score":3,"status":"FINISHED","winnerId":1,"durationMs":120000}'
+
+Admin vs User1 (matches)
+curl $CURL_OPTS "$BASE_URL/matches?token=$ADMIN_TOKEN"
+curl $CURL_OPTS "$BASE_URL/matches?token=$USER1_TOKEN"
+curl $CURL_OPTS "$BASE_URL/matches/1?token=$ADMIN_TOKEN"
+curl $CURL_OPTS "$BASE_URL/leaderboard"
+
+2FA-setup
+curl $CURL_OPTS -X POST "$BASE_URL/auth/2fa/setup?token=$ADMIN_TOKEN"
+curl $CURL_OPTS -X POST "$BASE_URL/auth/2fa/enable?token=$ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"<6-digit-code>"}'
+
+Try admin login
+curl $CURL_OPTS -X POST "$BASE_URL/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"adminpassword123"}'
+
+curl $CURL_OPTS -X POST "$BASE_URL/auth/2fa/verify" \
+  -H 'Content-Type: application/json' \
+  -d '{"tempToken":"<temp-token>","code":"<6-digit-code>"}'
+
+export ADMIN_2FA_TOKEN='<paste-verified-jwt>'
+
+disable 2FA
+curl $CURL_OPTS -X POST "$BASE_URL/auth/2fa/disable?token=$ADMIN_2FA_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"<6-digit-code>"}'
+
+logging out.
+curl $CURL_OPTS -X POST "$BASE_URL/auth/logout"
+
+public api testing
+curl $CURL_OPTS -H "x-api-key: $API_KEY" "$BASE_URL/public/items"
+curl $CURL_OPTS -X POST "$BASE_URL/public/items" \
+  -H "x-api-key: $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"item1","content":"hello"}'
+curl $CURL_OPTS -H "x-api-key: $API_KEY" "$BASE_URL/public/items/1"
+curl $CURL_OPTS -X PUT "$BASE_URL/public/items/1" \
+  -H "x-api-key: $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"item1-updated","content":"hello updated"}'
+curl $CURL_OPTS -X DELETE "$BASE_URL/public/items/1" \
+  -H "x-api-key: $API_KEY"
+
+doing login 6 times (401 endpoint reached, bad credientials, 429 means limit reached)
+for i in 1 2 3 4 5 6; do curl -o /dev/null -w "login $i => %{http_code}\n" $CURL_OPTS -X POST "$BASE_URL/auth/login" -H 'Content-Type: application/json' -d '{"email":"admin@example.com","password":"wrong"}'; done
+
+doing search for 31 times(can find is 200, bad credentials is 401, 429 means limit reached)
+for i in $(seq 1 31); do curl -o /dev/null -w "search $i => %{http_code}\n" $CURL_OPTS "$BASE_URL/users/search?q=user&token=$USER1_TOKEN"; done
+
+generating matches (201 first one created the match, 409 means rejected as duplicate, 429 means limited reached)
+for i in $(seq 1 31); do curl -o /dev/null -w "matches $i => %{http_code}\n" $CURL_OPTS -X POST "$BASE_URL/matches?token=$ADMIN_TOKEN" -H 'Content-Type: application/json' -d '{"player1Id":1,"player2Id":2,"player1Score":5,"player2Score":3,"status":"FINISHED","winnerId":1,"durationMs":120000}'; done
+
+testing public api (401, API key is wrong, 500 PUBLIC_API_KEY_missing in env, 000 request didnt reach, 429 limit reached)
+for i in $(seq 1 61); do curl -o /dev/null -w "public $i => %{http_code}\n" $CURL_OPTS -H "x-api-key: $API_KEY" "$BASE_URL/public/items"; done
+
+###############################################################################
+# DOCKER MODE
+###############################################################################
+
+cd /home/vboxuser/Main
+docker compose down -v
+docker compose up --build
+
+export BASE_URL='https://localhost:8443/api'
+export CURL_OPTS='-k -sS'
+export API_KEY='<paste-public-api-key>'
+
+# reuse the same curl commands above after changing BASE_URL and CURL_OPTS
+
