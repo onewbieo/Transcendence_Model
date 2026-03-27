@@ -1007,13 +1007,7 @@ export async function gameWs(app: FastifyInstance) {
             }
             
             room.p1DisconnectDeadlineMs = undefined; 
-
-            const now = Date.now();
-            const p2Expired =
-              room.p2 === null && (
-                room.p2DisconnectDeadlineMs === undefined || room.p2DisconnectDeadlineMs <= now);
-
-            if (p2Expired) {
+            if (room.p2 === null) {
               void endMatchDraw(room, info.matchId);
               return;
             }
@@ -1037,13 +1031,7 @@ export async function gameWs(app: FastifyInstance) {
             }
             
             room.p2DisconnectDeadlineMs = undefined;
-
-            const now = Date.now();
-            const p1Expired =
-              room.p1 === null &&
-              (room.p1DisconnectDeadlineMs === undefined || room.p1DisconnectDeadlineMs <= now);
-
-            if (p1Expired) {
+            if (room.p1 === null) {
               void endMatchDraw(room, info.matchId);
               return;
             }
